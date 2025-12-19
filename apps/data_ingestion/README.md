@@ -21,4 +21,5 @@ While Airbyte moves the data, [Airflow](../job_orchestration/README.md) acts as 
     - `/linkedin/`: Drop your LinkedIn CSV exports here.
     - `/substack/`: Drop your Substack CSV exports here.
   - Setup: Point `LOCAL_DATA_PATH` in your `.env` to this directory.
+  - **Schema Note**: By default, the database only includes core schemas. If you use personal folders like `linkedin` or `substack`, you must create the corresponding schemas (e.g., `s_linkedin`) manually in Postgres or via your own initialization scripts.
 
