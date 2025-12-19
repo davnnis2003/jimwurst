@@ -13,18 +13,24 @@ Welcome, Agent. You are working on **jimwurst**, a monolithic DWH repository for
 *It is sausage to me.* In this repo, it means we don't sweat the small stuff, but we are **dead serious** about DWH architecture. We are tools-agnostic; tooling is abstracted into the folder structure.
 
 ## 🏗 Repository Structure (The Monolith)
-Each application must follow a strict modular structure within the `apps/` directory (or appropriate top-level folders if specified). Tooling is materialized through structure:
+Each application follows a strict modular structure using `snake_case`. Tooling is materialized through structure:
 
 ```text
-apps/
-├── data-ingestion/
-│   └── airbyte/
-├── data-transformation/
-│   └── dbt/
-├── data-activation/
-│   └── metabase/
-└── job-orchestration/
-    └── airflow/
+.
+├── .github/                 # GitHub Actions workflows and CI config
+├── apps/                    # Tool-specific configurations and deployments
+│   ├── data_ingestion/      # Ingestion tools
+│   │   └── airbyte/
+│   ├── data_transformation/ # Transformation tools
+│   │   └── dbt/             # Central dbt project
+│   ├── data_activation/     # BI & activation tools
+│   │   └── metabase/
+│   └── job_orchestration/   # Orchestration tools
+│       └── airflow/
+│           └── dags/        # Airflow DAG definitions
+├── docs/                    # Documentation, diagrams, and architecture RFCs
+├── prompts/                 # AI system prompts and LLM context files
+└── utils/                   # Shared internal packages (Python utils, custom operators)
 ```
 
 ## 🛠 Tech Stack
@@ -39,6 +45,7 @@ apps/
 1. **Tools Agnostic**: Logic should be separated from specific tools. If we swap Airbyte for something else, the `data-ingestion` logic should remain clear.
 2. **Open Source First**: Prioritize open-source tooling.
 3. **Scale with Simplicity**: Aim for "Engineering Value at Scale." Refer to [Data Biz](https://jimmypang.substack.com/s/engineering-value-at-scale) for the underlying philosophy.
+4. **100% Local Execution**: Everything in this repo is expected to be 100% running locally.
 
 ## 🚀 How to Help Jimmy (and the other users)
 - Proactively suggest optimizations for the DWH architecture.
