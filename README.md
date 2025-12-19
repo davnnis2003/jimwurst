@@ -9,9 +9,9 @@ It is a Geramn expression meaning that "It doesn't matter to me", literally tran
 Casual in attitude, serious about DWH architecture. 
 
 # Tenet
-This is a monolithic repository of a DWH for personal data analytics and AI. 
+This is a monolithic repository of a DWH for personal data analytics and AI. Everything in this repo is expected to be **100% running locally**.
 
-A very core idea here is **tools agnotic**. Any tooling in modern data stack will be abstracted, and materialize in places like folder strucutre. Open source tooling will be priotized.
+A very core idea here is **tools agnostic**. Any tooling in modern data stack will be abstracted, and materialize in places like folder structure. Open source tooling will be prioritized.
 
 The pholosophy behind can be found in [Data Biz](https://jimmypang.substack.com/s/engineering-value-at-scale).
 
@@ -32,16 +32,22 @@ The pholosophy behind can be found in [Data Biz](https://jimmypang.substack.com/
   * AI: [Ollama](https://github.com/ollama/ollama)
 
 ## 🏗 Folder Structure
-Each application must follow a strict modular structure within the `apps/` directory (or appropriate top-level folders if specified). Tooling is materialized through structure:
+Each application follows a strict modular structure using `snake_case`. Tooling is materialized through structure:
 
 ```text
-apps/
-├── data-ingestion/
-│   └── airbyte/
-├── data-transformation/
-│   └── dbt/
-├── data-activation/
-│   └── metabase/
-└── job-orchestration/
-    └── airflow/
+.
+├── .github/                 # GitHub Actions workflows and CI config
+├── apps/                    # Tool-specific configurations and deployments
+│   ├── data_ingestion/      # Ingestion tools
+│   │   └── airbyte/
+│   ├── data_transformation/ # Transformation tools
+│   │   └── dbt/             # Central dbt project
+│   ├── data_activation/     # BI & activation tools
+│   │   └── metabase/
+│   └── job_orchestration/   # Orchestration tools
+│       └── airflow/
+├── docker/                  # Local orchestration (Docker Compose, .env)
+├── docs/                    # Documentation, diagrams, and architecture RFCs
+├── prompts/                 # AI system prompts and LLM context files
+└── utils/                   # Shared internal packages (Python utils, custom operators)
 ```
