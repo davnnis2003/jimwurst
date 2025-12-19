@@ -15,6 +15,22 @@ A very core idea here is **tools agnostic**. Any tooling in modern data stack wi
 
 The pholosophy behind can be found in [Data Biz](https://jimmypang.substack.com/s/engineering-value-at-scale).
 
+# Getting Started
+To get the local stack running (Postgres), simply run:
+
+```bash
+make up
+```
+This will create the necessary `.env` file and spin up the Docker containers.
+
+## Connectivity
+You can connect to the local PostgreSQL instance with the following details:
+* **Host**: `localhost`
+* **Port**: `5432`
+* **User**: `jimwurst_user` (default)
+* **Password**: `jimwurst_password` (default)
+* **Database**: `jimwurst_db` (default)
+
 # Abstraction & Toolings
 
 ## Data Ops
