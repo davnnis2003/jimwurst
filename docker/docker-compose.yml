@@ -11,7 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ${LOCAL_DATA_PATH:-~/document/jimwurst_local_data}:/local_data:ro
+      - ${LOCAL_DATA_PATH:-~/Documents/jimwurst_local_data}:/local_data:ro
     networks:
       - jimwurst_net
     restart: always
