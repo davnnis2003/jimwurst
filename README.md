@@ -31,3 +31,17 @@ The pholosophy behind can be found in [Data Biz](https://jimmypang.substack.com/
   * adhoc analysis: [Jupyter](https://github.com/jupyter/jupyter)
   * AI: [Ollama](https://github.com/ollama/ollama)
 
+## 🏗 Folder Structure
+Each application must follow a strict modular structure within the `apps/` directory (or appropriate top-level folders if specified). Tooling is materialized through structure:
+
+```text
+apps/
+├── data-ingestion/
+│   └── airbyte/
+├── data-transformation/
+│   └── dbt/
+├── data-activation/
+│   └── metabase/
+└── job-orchestration/
+    └── airflow/
+```
