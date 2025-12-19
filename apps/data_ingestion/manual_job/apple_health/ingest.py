@@ -5,6 +5,7 @@ import psycopg2
 from psycopg2 import sql
 from datetime import datetime
 from tqdm import tqdm
+from psycopg2.extras import execute_values
 
 from dotenv import load_dotenv
 
@@ -57,6 +58,36 @@ def ensure_schema(conn):
     conn.commit()
     print(f"Schema '{SCHEMA_NAME}' checked/created.")
 
+def get_record_count(xml_file):
+    """Quickly counts the number of Record tags in the XML."""
+    print("Pre-scanning file to estimate records...")
+    count = 0
+    context = ET.iterparse(xml_file, events=("end",))
+    for event, elem in context:
+        if elem.tag == "Record":
+            count += 1
+        elem.clear()
+    return count
+
+def estimate_and_confirm(count):
+    """Estimates time and asks user for confirmation."""
+    records_per_second = 50000 
+    est_seconds = count / records_per_second
+    
+    print(f"\n--- Ingestion Estimate ---")
+    print(f"Total Records: {count:,}")
+    print(f"Estimated Time: {est_seconds:.1f} seconds (~{records_per_second:,} rec/s)")
+    print(f"--------------------------\n")
+    
+    try:
+        choice = input("Proceed with ingestion? [Y/n]: ").strip().lower()
+        if choice not in ('', 'y', 'yes'):
+            print("Aborted by user.")
+            sys.exit(0)
+    except EOFError:
+        # If running in a non-interactive shell, we proceed
+        print("Non-interactive session detected, proceeding...")
+
 def parse_and_ingest(xml_file):
     """
     Parses the export.xml file.
@@ -73,6 +104,12 @@ def parse_and_ingest(xml_file):
             sys.exit(1)
 
     print(f"Using file: {xml_file}")
+    
+    # --- New: Estimation Feature ---
+    total_records = get_record_count(xml_file)
+    estimate_and_confirm(total_records)
+    # ------------------------------
+
     conn = get_db_connection()
     ensure_schema(conn)
 
@@ -153,15 +190,19 @@ def parse_and_ingest(xml_file):
                 elem.clear() # Free memory
                 
                 if len(batch) >= batch_size:
-                    args_str = ','.join(cur.mogrify("(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", x).decode('utf-8') for x in batch)
-                    cur.execute(sql.SQL("INSERT INTO {schema}.records VALUES " + args_str).format(schema=sql.Identifier(SCHEMA_NAME)))
+                    execute_values(cur, 
+                        sql.SQL("INSERT INTO {schema}.records VALUES %s").format(schema=sql.Identifier(SCHEMA_NAME)),
+                        batch
+                    )
                     conn.commit()
                     batch = []
 
         # Final batch
         if batch:
-            args_str = ','.join(cur.mogrify("(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", x).decode('utf-8') for x in batch)
-            cur.execute(sql.SQL("INSERT INTO {schema}.records VALUES " + args_str).format(schema=sql.Identifier(SCHEMA_NAME)))
+            execute_values(cur, 
+                sql.SQL("INSERT INTO {schema}.records VALUES %s").format(schema=sql.Identifier(SCHEMA_NAME)),
+                batch
+            )
             conn.commit()
 
     print(f"Ingestion complete. {record_count} records inserted.")
