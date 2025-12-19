@@ -28,6 +28,7 @@ Each application follows a strict modular structure using `snake_case`. Tooling 
 │   └── job_orchestration/   # Orchestration tools
 │       └── airflow/
 │           └── dags/        # Airflow DAG definitions
+├── docker/                  # Local orchestration (Docker Compose, .env)
 ├── docs/                    # Documentation, diagrams, and architecture RFCs
 ├── prompts/                 # AI system prompts and LLM context files
 └── utils/                   # Shared internal packages (Python utils, custom operators)
