@@ -4,7 +4,7 @@
 
 > "Es ist mir wurst." Germans 🇩🇪 
 
-It is a Geramn expression meaning that "It doesn't matter to me", literally translated as "This is sausage to me". 🌭 (yeah no there is no sausage emoji so I am putting a hotdog here instead)
+It is a German expression meaning that "It doesn't matter to me", literally translated as "This is sausage to me". 🌭 (yeah no there is no sausage emoji so I am putting a hotdog here instead)
 
 Casual in attitude, serious about DWH architecture. 
 
@@ -30,6 +30,13 @@ You can connect to the local PostgreSQL instance with the following details:
 * **User**: `jimwurst_user` (default)
 * **Password**: `jimwurst_password` (default)
 * **Database**: `jimwurst_db` (default)
+
+## Database Schemas
+The following schemas are initialized by default:
+* `marts`: Modeled data ready for consumption.
+* `intermediate`: Intermediate data transformations.
+* `staging`: Raw data staging area.
+* `s_<app_name>`: Operational Data Store (ODS) schemas (e.g. `s_google_sheet`).
 
 # Abstraction & Toolings
 
