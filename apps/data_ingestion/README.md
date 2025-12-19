@@ -14,5 +14,12 @@ While Airbyte moves the data, [Airflow](../job_orchestration/README.md) acts as 
 
 ## 📂 Structure
 
-- **`airbyte/`**: Contains Airbyte-specific configuration files, deployment scripts, and potentially Octavia CLI (configuration-as-code) definitions.
+- **`airbyte/`**: Contains Airbyte-specific configuration files.
+- **Manual Ingestion (PII Safe)**: We use an external "Landing Zone" located outside this repository to ensure PII (Personally Identifiable Information) is never committed to Git.
+  - Default Location: `~/document/jimwurst_local_data/`
+  - Structure:
+    - `/linkedin/`: Drop your LinkedIn CSV exports here.
+    - `/substack/`: Drop your Substack CSV exports here.
+  - Setup: Point `LOCAL_DATA_PATH` in your `.env` to this directory.
+  - **Schema Note**: By default, the database only includes core schemas. If you use personal folders like `linkedin` or `substack`, you must create the corresponding schemas (e.g., `s_linkedin`) manually in Postgres or via your own initialization scripts.
 
