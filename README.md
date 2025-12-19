@@ -2,11 +2,9 @@
 
 ![jimwurst](docs/jimwurst.png)
 
-> "Es ist mir wurst"
+> "Es ist mir wurst." Germans 🇩🇪 
 
 It is a Geramn expression meaning that "It doesn't matter to me", literally translated as "This is sausage to me". 🌭 (yeah no there is no sausage emoji so I am putting a hotdog here instead)
-
-This is a monolithic repository of a DWH for personal data analytics and AI.
 
 Casual in attitude, serious about DWH architecture. 
 
