@@ -60,3 +60,23 @@ ingest-bolt:
 ingest-telegram:
 	@echo "Running Telegram ingestion..."
 	@.venv/bin/python3 apps/data_ingestion/manual_job/telegram/ingest.py
+
+.PHONY: airbyte-up
+airbyte-up:
+	@echo "Checking for abctl..."
+	@if ! command -v abctl > /dev/null 2>&1; then \
+		echo "abctl not found. Please install it with: brew install airbytehq/tap/abctl"; \
+		exit 1; \
+	fi
+	@echo "Starting Airbyte via abctl..."
+	abctl local install
+
+.PHONY: airbyte-down
+airbyte-down:
+	@echo "Uninstalling Airbyte via abctl..."
+	abctl local uninstall
+
+.PHONY: airbyte-status
+airbyte-status:
+	@echo "Airbyte status..."
+	abctl local status

@@ -21,7 +21,13 @@ To get the local stack running (Postgres), simply run:
 ```bash
 make up
 ```
-This will create the necessary `.env` file and spin up the Docker containers.
+This will create the necessary `.env` file and spin up the Docker containers (Postgres).
+
+To start Airbyte, ensure you have [abctl](https://github.com/airbytehq/abctl) installed (`brew install airbytehq/tap/abctl` on macOS), then run:
+```bash
+make airbyte-up
+```
+Airbyte will be accessible at `http://localhost:8000`.
 
 ## Connectivity
 You can connect to the local PostgreSQL instance with the following details:
@@ -62,7 +68,7 @@ Each application follows a strict modular structure using `snake_case`. Tooling 
 ├── .github/                 # GitHub Actions workflows and CI config
 ├── apps/                    # Tool-specific configurations and deployments
 │   ├── data_ingestion/      # Ingestion tools
-│   │   └── airbyte/
+│   │   └── airbyte/         # Airbyte Meta (abctl managed)
 │   ├── data_transformation/ # Transformation tools
 │   │   └── dbt/             # Central dbt project
 │   ├── data_activation/     # BI & activation tools
