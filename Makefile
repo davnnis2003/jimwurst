@@ -30,9 +30,15 @@ setup: .init-dirs
 	@python3 -m venv .venv
 	@echo "Installing dependencies..."
 	@.venv/bin/pip install -r apps/data_ingestion/manual_job/apple_health/requirements.txt
+	@.venv/bin/pip install -r apps/data_ingestion/manual_job/substack/requirements.txt
 	@echo "Setup complete. Use 'make ingest-apple-health' to run the ingestion script."
 
 .PHONY: ingest-apple-health
 ingest-apple-health:
 	@echo "Running Apple Health ingestion..."
 	@.venv/bin/python3 apps/data_ingestion/manual_job/apple_health/ingest.py
+
+.PHONY: ingest-substack
+ingest-substack:
+	@echo "Running Substack ingestion..."
+	@.venv/bin/python3 apps/data_ingestion/manual_job/substack/ingest.py
