@@ -22,7 +22,7 @@ up: .init-dirs
 	@echo "Ensuring local data directories exist..."
 	@DATA_PATH=$$(grep LOCAL_DATA_PATH docker/.env | cut -d '=' -f2 | sed 's|^~|$(HOME)|'); \
 	if [ -z "$$DATA_PATH" ]; then DATA_PATH="$(HOME)/Documents/jimwurst_local_data"; fi; \
-	mkdir -p "$$DATA_PATH/linkedin" "$$DATA_PATH/substack" "$$DATA_PATH/apple_health"
+	mkdir -p "$$DATA_PATH/linkedin" "$$DATA_PATH/substack" "$$DATA_PATH/apple_health" "$$DATA_PATH/bolt" "$$DATA_PATH/telegram"
 
 .PHONY: setup
 setup: .init-dirs
@@ -31,7 +31,10 @@ setup: .init-dirs
 	@echo "Installing dependencies..."
 	@.venv/bin/pip install -r apps/data_ingestion/manual_job/apple_health/requirements.txt
 	@.venv/bin/pip install -r apps/data_ingestion/manual_job/substack/requirements.txt
-	@echo "Setup complete. Use 'make ingest-apple-health' to run the ingestion script."
+	@.venv/bin/pip install -r apps/data_ingestion/manual_job/linkedin/requirements.txt
+	@.venv/bin/pip install -r apps/data_ingestion/manual_job/bolt/requirements.txt
+	@.venv/bin/pip install -r apps/data_ingestion/manual_job/telegram/requirements.txt
+	@echo "Setup complete. Use 'make ingest-<app>' to run the ingestion scripts."
 
 .PHONY: ingest-apple-health
 ingest-apple-health:
@@ -42,3 +45,18 @@ ingest-apple-health:
 ingest-substack:
 	@echo "Running Substack ingestion..."
 	@.venv/bin/python3 apps/data_ingestion/manual_job/substack/ingest.py
+
+.PHONY: ingest-linkedin
+ingest-linkedin:
+	@echo "Running LinkedIn ingestion..."
+	@.venv/bin/python3 apps/data_ingestion/manual_job/linkedin/ingest.py
+
+.PHONY: ingest-bolt
+ingest-bolt:
+	@echo "Running Bolt ingestion..."
+	@.venv/bin/python3 apps/data_ingestion/manual_job/bolt/ingest.py
+
+.PHONY: ingest-telegram
+ingest-telegram:
+	@echo "Running Telegram ingestion..."
+	@.venv/bin/python3 apps/data_ingestion/manual_job/telegram/ingest.py
