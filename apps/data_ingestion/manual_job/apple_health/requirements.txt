@@ -1,4 +1,0 @@
-psycopg2-binary
-lxml
-tqdm
-python-dotenv

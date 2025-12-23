@@ -1,0 +1,16 @@
+[project]
+name = "jimwurst"
+version = "0.1.0"
+description = "A monolithic repository of a DWH for personal data analytics and AI"
+requires-python = ">=3.9"
+dependencies = [
+    "psycopg2-binary==2.9.11",
+    "lxml==6.0.2",
+    "openpyxl==3.1.5",
+    "python-dotenv==1.2.1",
+    "tqdm==4.67.1",
+    "et-xmlfile==2.0.0",
+]
+
+[tool.uv]
+# UV-specific configuration can go here if needed
