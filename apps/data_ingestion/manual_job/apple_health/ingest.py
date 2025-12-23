@@ -7,56 +7,18 @@ from datetime import datetime
 from tqdm import tqdm
 from psycopg2.extras import execute_values
 
-from dotenv import load_dotenv
+# Import common utilities
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../utils'))
+from ingestion_utils import load_env, get_db_connection, ensure_schema
 
-# --- Configuration ---
-# Define paths to env files
-ENV_DIR = os.path.join(os.path.dirname(__file__), '../../../../docker')
-ENV_EXAMPLE = os.path.join(ENV_DIR, '.env.example')
-ENV_REAL = os.path.join(ENV_DIR, '.env')
-
-# 1. Load defaults from .env.example
-if os.path.exists(ENV_EXAMPLE):
-    load_dotenv(ENV_EXAMPLE)
-
-# 2. Override with actual values from .env (if it exists)
-if os.path.exists(ENV_REAL):
-    load_dotenv(ENV_REAL, override=True)
-
-# Allow overriding via Environment Variables (matching docker-compose)
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_NAME = os.getenv("POSTGRES_DB", "jimwurst_db")
-DB_USER = os.getenv("POSTGRES_USER", "jimwurst_user")
-DB_PASS = os.getenv("POSTGRES_PASSWORD", "jimwurst_password")
-DB_PORT = os.getenv("DB_PORT", "5432")
+# Load env vars
+load_env()
 
 # Default path points to the external volume location we defined
 DEFAULT_XML_PATH = os.path.expanduser("~/Documents/jimwurst_local_data/apple_health/export.xml")
 XML_PATH = os.getenv("EXPORT_XML_PATH", DEFAULT_XML_PATH)
 
 SCHEMA_NAME = "s_apple_health"
-
-def get_db_connection():
-    """Establishes a connection to the PostgreSQL database."""
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASS,
-            port=DB_PORT
-        )
-        return conn
-    except Exception as e:
-        print(f"Error connecting to database: {e}")
-        sys.exit(1)
-
-def ensure_schema(conn):
-    """Creates the schema if it doesn't exist."""
-    with conn.cursor() as cur:
-        cur.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(SCHEMA_NAME)))
-    conn.commit()
-    print(f"Schema '{SCHEMA_NAME}' checked/created.")
 
 def get_record_count(xml_file):
     """Quickly counts the number of Record tags in the XML."""
@@ -111,7 +73,7 @@ def parse_and_ingest(xml_file):
     # ------------------------------
 
     conn = get_db_connection()
-    ensure_schema(conn)
+    ensure_schema(conn, SCHEMA_NAME)
 
     # DDL for a generic records table
     # We drop and recreate for a full refresh pattern
