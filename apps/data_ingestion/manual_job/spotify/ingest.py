@@ -2,6 +2,7 @@ import os
 import sys
 import csv
 import json
+import argparse
 import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import execute_values
@@ -309,9 +310,16 @@ def scan_for_files():
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Spotify Data Ingestion")
+    parser.add_argument('--yes', '-y', action='store_true', help='Skip confirmation prompt')
+    parser.add_argument('--dry-run', action='store_true', help='Show what would be ingested without actually doing it')
+    args = parser.parse_args()
+    
     print(f"Spotify Data Ingestion")
     print(f"=" * 50)
     print(f"Data Path: {DATA_PATH}")
+    if args.dry_run:
+        print("DRY RUN MODE - No data will be ingested")
     print()
     
     # Create directory if it doesn't exist
@@ -359,16 +367,20 @@ def main():
     print(f"Estimated Processing Time: ~{estimated_seconds:.1f} seconds")
     
     # User Confirmation
-    try:
-        response = input("\nDo you want to proceed with Spotify data ingestion? (y/N): ").strip().lower()
-    except KeyboardInterrupt:
-        print("\nOperation cancelled.")
+    if not args.yes and not args.dry_run:
+        try:
+            response = input("\nDo you want to proceed with Spotify data ingestion? (y/N): ").strip().lower()
+        except KeyboardInterrupt:
+            print("\nOperation cancelled.")
+            sys.exit(0)
+            
+        if response != 'y':
+            print("Operation cancelled.")
+            sys.exit(0)
+    elif args.dry_run:
+        print("\nDry run complete. Use --yes to actually ingest data.")
         sys.exit(0)
-        
-    if response != 'y':
-        print("Operation cancelled.")
-        sys.exit(0)
-
+    
     print("\nStarting ingestion...")
     print("=" * 50)
     

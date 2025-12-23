@@ -60,9 +60,20 @@ make ingest-spotify
 # Install dependencies
 .venv/bin/pip install -r apps/data_ingestion/manual_job/spotify/requirements.txt
 
-# Run the ingestion
+# Run the ingestion (interactive)
 .venv/bin/python apps/data_ingestion/manual_job/spotify/ingest.py
+
+# Run with automatic confirmation
+.venv/bin/python apps/data_ingestion/manual_job/spotify/ingest.py --yes
+
+# Dry run to see what would be ingested
+.venv/bin/python apps/data_ingestion/manual_job/spotify/ingest.py --dry-run
 ```
+
+## Command Line Options
+
+- `--yes`, `-y`: Skip the confirmation prompt and proceed with ingestion
+- `--dry-run`: List files that would be ingested without actually processing them
 
 ## Example Output
 
