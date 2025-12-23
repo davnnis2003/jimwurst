@@ -11,11 +11,16 @@ with source as (
 ),
 renamed as (
     select
-        "CONVERSATION NAME" as conversation_name,
-        "FROM" as sender,
-        "TO" as recipient,
-        "CONTENT" as body,
-        cast("DATE" as timestamp) as sent_at
+        conversation_title as conversation_name,
+        "from" as sender,
+        sender_profile_url,
+        "to" as recipient,
+        recipient_profile_urls,
+        content as body,
+        cast("date" as timestamp) as sent_at,
+        subject,
+        folder,
+        attachments
     from source
 )
 

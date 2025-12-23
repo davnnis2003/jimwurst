@@ -42,6 +42,9 @@ Each application follows a strict modular structure using `snake_case`. Tooling 
 - **Orchestration**: Airflow.
 - **Activation**: Metabase / Lightdash, Jupyter, Ollama (AI).
 
+### Schema naming directive
+- Staging models must use the `staging` schema (do not use `public_staging`); macros are configured to enforce this.
+
 ## 💡 Architectural Principles
 1. **Tools Agnostic**: Logic should be separated from specific tools. If we swap Airbyte for something else, the `data-ingestion` logic should remain clear.
 2. **Open Source First**: Prioritize open-source tooling.

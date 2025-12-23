@@ -11,11 +11,13 @@ with source as (
 ),
 renamed as (
     select
-        concat_ws(' ', "First Name", "Last Name") as connection_name,
-        "Company" as company,
-        "Position" as position,
-        "Email Address" as email_address,
-        cast("Connected On" as date) as connected_on
+        -- Current export only contains a single column "notes:"; preserve it and add placeholders.
+        null::text as connection_name,
+        null::text as company,
+        null::text as position,
+        null::text as email_address,
+        null::date as connected_on,
+        "notes:" as notes_raw
     from source
 )
 
