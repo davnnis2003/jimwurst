@@ -9,4 +9,14 @@ sources:
         description: Connection records from the full data archive export.
       - name: complete_messages
         description: Message history from the full data archive export.
+      - name: basic_content_2025_12_17_2025_12_23_jimmypang_demographics
+        description: Basic creator insights - demographics tab from XLSX export.
+      - name: basic_content_2025_12_17_2025_12_23_jimmypang_discovery
+        description: Basic creator insights - discovery tab from XLSX export.
+      - name: basic_content_2025_12_17_2025_12_23_jimmypang_engagement
+        description: Basic creator insights - engagement tab from XLSX export.
+      - name: basic_content_2025_12_17_2025_12_23_jimmypang_followers
+        description: Basic creator insights - followers tab from XLSX export.
+      - name: basic_content_2025_12_17_2025_12_23_jimmypang_top_posts
+        description: Basic creator insights - top posts tab from XLSX export.
 
