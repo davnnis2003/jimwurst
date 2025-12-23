@@ -33,6 +33,7 @@ jimwurst is a monolithic data warehouse (DWH) repository for personal data analy
   - Flatten nested JSON/CSV data into tabular format.
   - Drop/recreate tables for idempotency (suitable for personal data).
   - Use `tqdm` for progress bars, `execute_values` for batch inserts.
+  - Import common utilities from `utils/ingestion_utils.py` (e.g., `load_env`, `get_db_connection`, `ensure_schema`).
   - Example: [apps/data_ingestion/manual_job/spotify/ingest.py](apps/data_ingestion/manual_job/spotify/ingest.py)
 - **Data Safety**: PII stays in local `LOCAL_DATA_PATH` (default `~/Documents/jimwurst_local_data/`), never committed to Git.
 - **Error Handling**: Basic try/except with sys.exit(1) on critical failures.
@@ -43,6 +44,7 @@ jimwurst is a monolithic data warehouse (DWH) repository for personal data analy
 - **Local Dev**: Docker for Postgres, uv for Python env.
 - **CI/CD**: GitHub Actions (not yet configured).
 - **Transformation**: dbt Core (project structure TBD).
+- **Shared Utils**: Common ingestion utilities in `utils/ingestion_utils.py`.
 
 ## Integration Points
 - **Database Connection**: Always via env vars, connect to local Postgres.
