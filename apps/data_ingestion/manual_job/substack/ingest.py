@@ -4,54 +4,19 @@ import csv
 import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import execute_values
-from dotenv import load_dotenv
 from tqdm import tqdm
 
-# --- Configuration ---
-ENV_DIR = os.path.join(os.path.dirname(__file__), '../../../../docker')
-ENV_EXAMPLE = os.path.join(ENV_DIR, '.env.example')
-ENV_REAL = os.path.join(ENV_DIR, '.env')
+# Import common utilities
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../utils'))
+from ingestion_utils import load_env, get_db_connection, ensure_schema, clean_header
 
 # Load env vars
-if os.path.exists(ENV_EXAMPLE):
-    load_dotenv(ENV_EXAMPLE)
-if os.path.exists(ENV_REAL):
-    load_dotenv(ENV_REAL, override=True)
-
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_NAME = os.getenv("POSTGRES_DB", "jimwurst_db")
-DB_USER = os.getenv("POSTGRES_USER", "jimwurst_user")
-DB_PASS = os.getenv("POSTGRES_PASSWORD", "jimwurst_password")
-DB_PORT = os.getenv("DB_PORT", "5432")
+load_env()
 
 DEFAULT_DATA_PATH = os.path.expanduser("~/Documents/jimwurst_local_data/substack")
 DATA_PATH = os.getenv("SUBSTACK_DATA_PATH", DEFAULT_DATA_PATH)
 
 SCHEMA_NAME = "s_substack"
-
-def get_db_connection():
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASS,
-            port=DB_PORT
-        )
-        return conn
-    except Exception as e:
-        print(f"Error connecting to database: {e}")
-        sys.exit(1)
-
-def ensure_schema(conn):
-    with conn.cursor() as cur:
-        cur.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(SCHEMA_NAME)))
-    conn.commit()
-    print(f"Schema '{SCHEMA_NAME}' checked/created.")
-
-def clean_header(header):
-    # Basic cleaning for column names
-    return header.strip().lower().replace(' ', '_').replace('-', '_').replace('.', '_')
 
 def ingest_csv(conn, file_path, table_name):
     print(f"Processing {table_name}...")
@@ -170,7 +135,7 @@ def main():
     print("\nStarting ingestion...")
     
     conn = get_db_connection()
-    ensure_schema(conn)
+    ensure_schema(conn, SCHEMA_NAME)
     
     for file_path in tqdm(csv_files, desc="Files"):
         filename = os.path.basename(file_path)
