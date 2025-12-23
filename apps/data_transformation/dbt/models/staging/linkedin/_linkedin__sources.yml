@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: linkedin
+    schema: s_linkedin
+    description: Raw LinkedIn exports loaded by manual ingestion scripts.
+    tables:
+      - name: complete_connections
+        description: Connection records from the full data archive export.
+      - name: complete_messages
+        description: Message history from the full data archive export.
+

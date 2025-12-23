@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: stg_spotify__streams
+    description: Cleaned Spotify streaming history with normalized column names.
+    config:
+      tags: ["staging", "spotify"]
+    columns:
+      - name: played_at_utc
+        description: UTC timestamp when the track playback ended.
+      - name: track_name
+        description: Track title.
+      - name: artist_name
+        description: Artist name.
+      - name: seconds_played
+        description: Playback duration in seconds.
+

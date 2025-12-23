@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: spotify
+    schema: s_spotify
+    description: Raw Spotify exports landed by manual ingestion scripts.
+    tables:
+      - name: streaminghistory0
+        description: Streaming history from `StreamingHistory0.json`.
+

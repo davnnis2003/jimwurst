@@ -1,0 +1,14 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "jimwurst",
+            "username": "jimwurst_user",
+            "database": "jimwurst_db"
+        }
+    ]
+}
