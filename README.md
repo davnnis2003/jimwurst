@@ -15,6 +15,44 @@ A very core idea here is **tools agnostic**. Any tooling in modern data stack wi
 
 The pholosophy behind can be found in [Data Biz](https://jimmypang.substack.com/s/engineering-value-at-scale).
 
+# Python Environment Setup
+
+This project uses [uv](https://github.com/astral-sh/uv) for fast, reliable Python dependency management.
+
+## Installing uv
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+After installation, restart your shell or run:
+```bash
+source $HOME/.local/bin/env
+```
+
+## Managing Dependencies
+
+**Create a virtual environment:**
+```bash
+uv venv
+```
+
+**Install dependencies:**
+```bash
+uv pip install -r requirements.txt
+```
+
+**Add a new dependency:**
+```bash
+uv pip install <package>
+uv pip freeze > requirements.txt
+```
+
+**Sync dependencies (ensure exact match with requirements.txt):**
+```bash
+uv pip sync requirements.txt
+```
+
 # Getting Started
 To get the local stack running (Postgres), simply run:
 
@@ -45,6 +83,7 @@ The following schemas are initialized by default:
 * CI/CD: [Github Actions](https://github.com/features/actions)
 * Job Orchestration: Python / [Makefile](Makefile)
 * DWH: Postgres
+* Package Manager: [uv](https://github.com/astral-sh/uv)
 
 ## Data Engineering
 * Data Ingestion: Python / SQL
