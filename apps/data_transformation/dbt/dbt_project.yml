@@ -38,5 +38,4 @@ models:
       +schema: marts
 
 vars:
-  enable_spotify_models: false
   enable_linkedin_models: false
