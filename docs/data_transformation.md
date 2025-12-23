@@ -373,15 +373,20 @@ models:
   jimwurst:
     staging:
       +materialized: view
+      +schema: staging
     intermediate:
       +materialized: ephemeral
+      +schema: intermediate
     marts:
       +materialized: table
+      +schema: marts
       finance:
         +schema: finance
       marketing:
         +schema: marketing
 ```
+
+**Note**: The `+schema` configurations will create schemas prefixed with the target schema from your `profiles.yml`. To avoid `public_` prefixes, set `schema: ""` (empty string) in your dbt profile target. If `schema` is required, you may need to adjust your profile configuration or accept the prefixed schemas.
 
 #### Groups
 Define access controls:
