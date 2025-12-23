@@ -1,0 +1,5 @@
+version: 2
+
+models:
+  - name: spotify_tracks
+    description: "Mart model for Spotify tracks with listening data"

@@ -29,11 +29,8 @@ clean-targets:         # directories to be removed by `dbt clean`
 models:
   jimwurst:
     staging:
+      schema: staging
       +materialized: view
-      +schema: staging
-    intermediate:
-      +materialized: ephemeral
-      +schema: intermediate
     marts:
+      schema: marts
       +materialized: table
-      +schema: marts
