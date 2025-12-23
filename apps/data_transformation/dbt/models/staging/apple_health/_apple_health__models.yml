@@ -1,5 +1,0 @@
-version: 2
-
-models:
-  - name: stg_apple_health__records
-    description: "Staging model for Apple Health records data"

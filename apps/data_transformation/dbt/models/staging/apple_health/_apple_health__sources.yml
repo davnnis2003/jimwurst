@@ -1,8 +1,0 @@
-version: 2
-
-sources:
-  - name: apple_health
-    database: jimwurst_db
-    schema: s_apple_health
-    tables:
-      - name: records

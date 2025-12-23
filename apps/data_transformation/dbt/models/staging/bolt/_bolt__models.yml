@@ -1,5 +1,0 @@
-version: 2
-
-models:
-  - name: stg_bolt__rides
-    description: "Staging model for Bolt rides data"

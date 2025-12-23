@@ -1,8 +1,0 @@
-version: 2
-
-sources:
-  - name: substack
-    database: jimwurst_db
-    schema: s_substack
-    tables:
-      - name: posts  # Placeholder

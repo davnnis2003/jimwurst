@@ -1,8 +1,0 @@
-version: 2
-
-sources:
-  - name: linkedin
-    database: jimwurst_db
-    schema: s_linkedin
-    tables:
-      - name: connections  # Placeholder
