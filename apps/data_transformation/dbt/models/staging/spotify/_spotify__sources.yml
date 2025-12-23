@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: spotify
+    database: jimwurst_db
+    schema: s_spotify
+    tables:
+      - name: tracks  # Example table, adjust based on actual data

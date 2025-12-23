@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: stg_spotify__tracks
+    description: "Staging model for Spotify tracks data"
+    columns:
+      - name: track_id
+        description: "Unique identifier for the track"
+      - name: track_name
+        description: "Name of the track"
+      - name: duration_seconds
+        description: "Duration of the track in seconds"
+      - name: popularity_category
+        description: "Popularity category (high or low)"

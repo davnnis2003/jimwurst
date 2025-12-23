@@ -1,0 +1,5 @@
+version: 2
+
+models:
+  - name: int_finance__payments_aggregated
+    description: "Aggregated payments data for finance"

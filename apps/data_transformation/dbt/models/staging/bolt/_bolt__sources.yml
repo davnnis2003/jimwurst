@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: bolt
+    database: jimwurst_db
+    schema: s_bolt
+    tables:
+      - name: rides  # Placeholder, adjust based on actual data

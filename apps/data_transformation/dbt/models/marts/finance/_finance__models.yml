@@ -1,0 +1,7 @@
+version: 2
+
+models:
+  - name: orders
+    description: "Business-ready orders data"
+  - name: payments
+    description: "Business-ready payments data"

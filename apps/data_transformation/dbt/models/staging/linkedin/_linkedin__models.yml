@@ -1,0 +1,5 @@
+version: 2
+
+models:
+  - name: stg_linkedin__connections
+    description: "Staging model for LinkedIn connections data"

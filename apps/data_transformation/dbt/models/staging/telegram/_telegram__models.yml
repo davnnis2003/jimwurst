@@ -1,0 +1,5 @@
+version: 2
+
+models:
+  - name: stg_telegram__messages
+    description: "Staging model for Telegram messages data"
