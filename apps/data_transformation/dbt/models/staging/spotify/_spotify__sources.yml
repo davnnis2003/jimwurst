@@ -5,4 +5,22 @@ sources:
     database: jimwurst_db
     schema: s_spotify
     tables:
-      - name: tracks  # Example table, adjust based on actual data
+      - name: streaming_history_audio_2015_2017_0
+      - name: streaming_history_audio_2017_1
+      - name: streaming_history_audio_2017_2018_2
+      - name: streaming_history_audio_2018_3
+      - name: streaming_history_audio_2018_4
+      - name: streaming_history_audio_2018_2019_5
+      - name: streaming_history_audio_2019_2020_6
+      - name: streaming_history_audio_2020_7
+      - name: streaming_history_audio_2020_2021_8
+      - name: streaming_history_audio_2021_9
+      - name: streaming_history_audio_2021_2022_10
+      - name: streaming_history_audio_2022_11
+      - name: streaming_history_audio_2022_2023_12
+      - name: streaming_history_audio_2023_13
+      - name: streaming_history_audio_2023_2024_14
+      - name: streaming_history_audio_2024_15
+      - name: streaming_history_audio_2024_2025_16
+      - name: streaming_history_audio_2025_17
+      - name: streaming_history_video_2018_2025
