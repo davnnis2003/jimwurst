@@ -6,19 +6,14 @@ import argparse
 import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import execute_values
-from dotenv import load_dotenv
 from tqdm import tqdm
 
-# --- Configuration ---
-ENV_DIR = os.path.join(os.path.dirname(__file__), '../../../../docker')
-ENV_EXAMPLE = os.path.join(ENV_DIR, '.env.example')
-ENV_REAL = os.path.join(ENV_DIR, '.env')
+# Import common utilities
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../utils'))
+from ingestion_utils import load_env, get_db_connection, ensure_schema, clean_header, sanitize_table_name
 
 # Load env vars
-if os.path.exists(ENV_EXAMPLE):
-    load_dotenv(ENV_EXAMPLE)
-if os.path.exists(ENV_REAL):
-    load_dotenv(ENV_REAL, override=True)
+load_env()
 
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("POSTGRES_DB", "jimwurst_db")
@@ -30,34 +25,6 @@ DEFAULT_DATA_PATH = os.path.expanduser("~/Documents/jimwurst_local_data/spotify"
 DATA_PATH = os.getenv("SPOTIFY_DATA_PATH", DEFAULT_DATA_PATH)
 
 SCHEMA_NAME = "s_spotify"
-
-def get_db_connection():
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASS,
-            port=DB_PORT
-        )
-        return conn
-    except Exception as e:
-        print(f"Error connecting to database: {e}")
-        sys.exit(1)
-
-def ensure_schema(conn):
-    with conn.cursor() as cur:
-        cur.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(SCHEMA_NAME)))
-    conn.commit()
-    print(f"Schema '{SCHEMA_NAME}' checked/created.")
-
-def clean_header(header):
-    """Basic cleaning for column names"""
-    return header.strip().lower().replace(' ', '_').replace('-', '_').replace('.', '_').replace('(', '').replace(')', '')
-
-def sanitize_table_name(filename):
-    """Sanitize filename to create valid table name"""
-    return os.path.splitext(filename)[0].lower().replace(' ', '_').replace('-', '_').replace('(', '').replace(')', '')
 
 
 class JSONIngestor:
@@ -385,7 +352,7 @@ def main():
     print("=" * 50)
     
     conn = get_db_connection()
-    ensure_schema(conn)
+    ensure_schema(conn, SCHEMA_NAME)
     
     json_ingestor = JSONIngestor(conn)
     csv_ingestor = CSVIngestor(conn)

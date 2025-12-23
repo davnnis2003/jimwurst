@@ -57,17 +57,14 @@ make ingest-spotify
 **Option 2: Manual Execution**
 
 ```bash
-# Install dependencies
-.venv/bin/pip install -r apps/data_ingestion/manual_job/spotify/requirements.txt
-
 # Run the ingestion (interactive)
-.venv/bin/python apps/data_ingestion/manual_job/spotify/ingest.py
+python3 apps/data_ingestion/manual_job/spotify/ingest.py
 
 # Run with automatic confirmation
-.venv/bin/python apps/data_ingestion/manual_job/spotify/ingest.py --yes
+python3 apps/data_ingestion/manual_job/spotify/ingest.py --yes
 
 # Dry run to see what would be ingested
-.venv/bin/python apps/data_ingestion/manual_job/spotify/ingest.py --dry-run
+python3 apps/data_ingestion/manual_job/spotify/ingest.py --dry-run
 ```
 
 ## Command Line Options
