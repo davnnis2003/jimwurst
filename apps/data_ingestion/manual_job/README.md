@@ -1,6 +1,6 @@
 # Manual Ingestion Jobs
 
-This directory contains scripts for "Manual Jobs" - standardized interactions where we ingest complex local data files that don't fit into standard Airbyte connectors.
+This directory contains scripts for "Manual Jobs" - standardized interactions where we ingest complex local data files that don't fit into standard automated connectors.
 
 ## Structure
 
