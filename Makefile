@@ -22,18 +22,21 @@ up: .init-dirs
 	@echo "Ensuring local data directories exist..."
 	@DATA_PATH=$$(grep LOCAL_DATA_PATH docker/.env | cut -d '=' -f2 | sed 's|^~|$(HOME)|'); \
 	if [ -z "$$DATA_PATH" ]; then DATA_PATH="$(HOME)/Documents/jimwurst_local_data"; fi; \
-	mkdir -p "$$DATA_PATH/linkedin" "$$DATA_PATH/substack" "$$DATA_PATH/apple_health" "$$DATA_PATH/bolt" "$$DATA_PATH/telegram"
+	mkdir -p "$$DATA_PATH/linkedin" "$$DATA_PATH/substack" "$$DATA_PATH/apple_health" "$$DATA_PATH/bolt" "$$DATA_PATH/telegram" "$$DATA_PATH/spotify"
 
 .PHONY: setup
 setup: .init-dirs
 	@echo "Setting up Python virtual environment..."
 	@python3 -m venv .venv
+	@echo "Upgrading pip..."
+	@.venv/bin/pip install --upgrade pip
 	@echo "Installing dependencies..."
-	@.venv/bin/pip install -r apps/data_ingestion/manual_job/apple_health/requirements.txt
-	@.venv/bin/pip install -r apps/data_ingestion/manual_job/substack/requirements.txt
-	@.venv/bin/pip install -r apps/data_ingestion/manual_job/linkedin/requirements.txt
-	@.venv/bin/pip install -r apps/data_ingestion/manual_job/bolt/requirements.txt
-	@.venv/bin/pip install -r apps/data_ingestion/manual_job/telegram/requirements.txt
+	@for req in apps/data_ingestion/manual_job/*/requirements.txt; do \
+		if [ -f "$$req" ]; then \
+			echo "Installing $$req..."; \
+			.venv/bin/pip install -r "$$req"; \
+		fi \
+	done
 	@echo "Setup complete. Use 'make ingest-<app>' to run the ingestion scripts."
 
 .PHONY: ingest-apple-health
@@ -60,3 +63,8 @@ ingest-bolt:
 ingest-telegram:
 	@echo "Running Telegram ingestion..."
 	@.venv/bin/python3 apps/data_ingestion/manual_job/telegram/ingest.py
+
+.PHONY: ingest-spotify
+ingest-spotify:
+	@echo "Running Spotify ingestion..."
+	@.venv/bin/python3 apps/data_ingestion/manual_job/spotify/ingest.py
