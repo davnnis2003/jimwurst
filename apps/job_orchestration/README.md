@@ -7,9 +7,11 @@ In a modern data stack, orchestration acts as the "central nervous system" that:
 - **Dependency Management**: Maps relationships between tasks (e.g., ensuring data ingestion completes before transformation starts).
 - **Error Handling & Observability**: Provides automated retries, failure alerting, and a centralized view of pipeline health.
 
-In this project, we leverage **Apache Airflow** to orchestrate our data lifecycles, defining our workflows as Python code (DAGs) for maximum flexibility and scalability.
+In this project, we prioritize a lightweight approach for personal use:
+- **Simple Orchestration**: Using [Makefile](Makefile) or basic Python scripts to trigger ingestion and transformation tasks.
+- **Advanced Orchestration (Optional)**: For complex workflows with many dependencies, we can leverage **Apache Airflow**.
 
 ## Project Structure
 
-- **airflow/**: Local Airflow deployment configuration.
+- **airflow/**: Local Airflow deployment configuration (Optional).
     - **dags/**: Directory for Airflow DAG definitions.

@@ -4,13 +4,15 @@ Data Ingestion is the "Entry Gate" for all raw data entering the **jimwurst** ec
 
 ## 🛠 Tooling
 
-### Airbyte
-[Airbyte](https://github.com/airbytehq/airbyte) is our primary ingestion engine. It provides a standardized way to sync data from hundreds of sources (APIs, DBs, Files) into Postgres.
-- **Configurations**: Connector settings and sync schedules are managed as code (or via the Airbyte UI during development).
-- **Deployment**: Airbyte runs as a set of Docker containers, orchestrated alongside the rest of the stack.
+### Lightweight Default (Personal Scale)
+For personal use, we prioritize simple, Python-based ingestion scripts. These are fast, easy to debug, and have minimal overhead.
+- **Manual Ingestion**: Scripts located in `manual_job/` for processing local data exports (LinkedIn, Substack, Apple Health, etc.).
+- **Custom Scripts**: You can add your own Python scripts to pull from APIs directly into Postgres.
 
-### Airflow
-While Airbyte moves the data, [Airflow](../job_orchestration/README.md) acts as the "Brain." It triggers Airbyte syncs based on time-based schedules or upstream event triggers.
+### Airbyte (Large Scale - Optional)
+[Airbyte](https://github.com/airbytehq/airbyte) is available for those who need to sync data from hundreds of complex sources.
+- **Note**: Airbyte is heavy and may require significant resources. It is recommended for advanced users or high-volume data operations.
+- **Configurations**: Managed as code or via the Airbyte UI.
 
 ## 📂 Structure
 

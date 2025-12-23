@@ -43,16 +43,21 @@ The following schemas are initialized by default:
 ## Data Ops
 * Containerization: [Docker](https://github.com/docker/docker)
 * CI/CD: [Github Actions](https://github.com/features/actions)
-* Job Orchestration: [Airflow](https://github.com/apache/airflow)
+* Job Orchestration: Python / [Makefile](Makefile)
 * DWH: Postgres
 
 ## Data Engineering
-* Data Ingestion: Airflow operators and [Airbtye](https://github.com/airbytehq/airbyte)
-* Data Transofmration: [dbt Core](https://github.com/dbt-labs/dbt-core)
+* Data Ingestion: Python / SQL
+* Data Transformation: [dbt Core](https://github.com/dbt-labs/dbt-core)
 * Data Activation:
   * Reporting: (tbd) [Metabase](https://github.com/metabase/metabase)/[lightdash](https://github.com/lightdash/lightdash)
   * adhoc analysis: [Jupyter](https://github.com/jupyter/jupyter)
   * AI: [Ollama](https://github.com/ollama/ollama)
+
+## Scalability (Optional)
+For larger-scale data operations, the following tools can be integrated:
+* Job Orchestration: [Apache Airflow](https://github.com/apache/airflow)
+* Data Ingestion: [Airbyte](https://github.com/airbytehq/airbyte)
 
 ## 🏗 Folder Structure
 Each application follows a strict modular structure using `snake_case`. Tooling is materialized through structure:
