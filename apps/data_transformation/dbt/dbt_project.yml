@@ -26,11 +26,4 @@ clean-targets:         # directories to be removed by `dbt clean`
 # Configuring models
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
 
-models:
-  jimwurst:
-    staging:
-      schema: staging
-      +materialized: view
-    marts:
-      schema: marts
-      +materialized: table
+# Model configurations will be added here as models are implemented
