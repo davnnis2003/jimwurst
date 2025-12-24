@@ -6,11 +6,11 @@ renamed AS (
     SELECT
         email,
         active_subscription::boolean AS is_active_subscription,
-        {{ dbt.safe_cast("expiry", api.Column.translate_type("timestamp")) }} AS expiry_at,
+        CASE WHEN expiry = '' THEN NULL ELSE expiry END::timestamp AS expiry_at,
         plan AS subscription_plan,
         email_disabled::boolean AS is_email_disabled,
-        {{ dbt.safe_cast("created_at", api.Column.translate_type("timestamp")) }} AS created_at,
-        {{ dbt.safe_cast("first_payment_at", api.Column.translate_type("timestamp")) }} AS first_payment_at,
+        CASE WHEN created_at = '' THEN NULL ELSE created_at END::timestamp AS created_at,
+        CASE WHEN first_payment_at = '' THEN NULL ELSE first_payment_at END::timestamp AS first_payment_at,
         _source_folder
     FROM source
 ),

@@ -5,10 +5,10 @@ WITH source AS (
 renamed AS (
     SELECT
         post_id,
-        {{ dbt.safe_cast("post_date", api.Column.translate_type("timestamp")) }} AS post_at,
+        CASE WHEN post_date = '' THEN NULL ELSE post_date END::timestamp AS post_at,
         is_published::boolean AS is_published,
-        {{ dbt.safe_cast("email_sent_at", api.Column.translate_type("timestamp")) }} AS email_sent_at,
-        {{ dbt.safe_cast("inbox_sent_at", api.Column.translate_type("timestamp")) }} AS inbox_sent_at,
+        CASE WHEN email_sent_at = '' THEN NULL ELSE email_sent_at END::timestamp AS email_sent_at,
+        CASE WHEN inbox_sent_at = '' THEN NULL ELSE inbox_sent_at END::timestamp AS inbox_sent_at,
         type AS post_type,
         audience AS post_audience,
         title,
