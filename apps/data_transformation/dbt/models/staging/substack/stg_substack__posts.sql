@@ -4,7 +4,7 @@ WITH source AS (
 
 renamed AS (
     SELECT
-        post_id,
+        split_part(post_id, '.', 1) AS post_id,
         CASE WHEN post_date = '' THEN NULL ELSE post_date END::timestamp AS post_at,
         is_published::boolean AS is_published,
         CASE WHEN email_sent_at = '' THEN NULL ELSE email_sent_at END::timestamp AS email_sent_at,

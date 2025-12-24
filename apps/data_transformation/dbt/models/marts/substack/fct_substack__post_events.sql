@@ -53,29 +53,37 @@ deduplicated AS (
             ORDER BY _source_folder DESC -- Heuristic: take newest export folder
         ) as row_num
     FROM unified
+),
+
+final AS (
+    SELECT
+        md5(
+            coalesce(d.post_id, '') || '|' || 
+            coalesce(d.email, '') || '|' || 
+            coalesce(d.event_at::text, '') || '|' || 
+            coalesce(d.event_type, '')
+        ) AS event_key,
+        d.post_id,
+        d.event_at,
+        d.email,
+        d.post_type,
+        d.post_audience,
+        d.is_active_subscription,
+        d.event_type,
+        d.country,
+        d.city,
+        d.region,
+        d.device_type,
+        d.client_os,
+        d.client_type,
+        d.user_agent,
+        d._source_folder,
+        p.title AS post_title,
+        p.subtitle AS post_subtitle,
+        p.post_at AS post_published_at
+    FROM deduplicated d
+    LEFT JOIN {{ ref('dim_substack__posts') }} p ON d.post_id = p.post_id
+    WHERE d.row_num = 1
 )
 
-SELECT
-    md5(
-        coalesce(post_id, '') || '|' || 
-        coalesce(email, '') || '|' || 
-        coalesce(event_at::text, '') || '|' || 
-        coalesce(event_type, '')
-    ) AS event_key,
-    post_id,
-    event_at,
-    email,
-    post_type,
-    post_audience,
-    is_active_subscription,
-    event_type,
-    country,
-    city,
-    region,
-    device_type,
-    client_os,
-    client_type,
-    user_agent,
-    _source_folder
-FROM deduplicated
-WHERE row_num = 1
+SELECT * FROM final

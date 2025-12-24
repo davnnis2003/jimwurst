@@ -33,3 +33,9 @@ models:
         description: ID of the post the event relates to.
       - name: event_type
         description: Type of event (e.g., 'delivery', 'open').
+      - name: post_title
+        description: Title of the post from dim_substack__posts.
+      - name: post_subtitle
+        description: Subtitle of the post from dim_substack__posts.
+      - name: post_published_at
+        description: Original publication timestamp of the post.
