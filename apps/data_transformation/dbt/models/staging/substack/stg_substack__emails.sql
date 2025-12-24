@@ -23,6 +23,6 @@ deduplicated AS (
 )
 
 SELECT 
-    * EXCLUDE (row_num)
+    *
 FROM deduplicated
 WHERE row_num = 1

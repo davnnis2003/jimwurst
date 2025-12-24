@@ -73,3 +73,8 @@ ingest-spotify:
 transform-linkedin:
 	@echo "Running LinkedIn dbt transformations..."
 	@cd apps/data_transformation/dbt && ../../../.venv/bin/dbt build --select source:linkedin+ --vars '{"enable_linkedin_models": true}'
+
+.PHONY: transform-substack
+transform-substack:
+	@echo "Running Substack dbt transformations..."
+	@cd apps/data_transformation/dbt && ../../../.venv/bin/dbt build --select source:substack+
