@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: stg_substack__posts
+    description: Cleaned metadata for Substack posts.
+  - name: stg_substack__emails
+    description: Cleaned subscriber list.
+  - name: stg_substack__post_delivers
+    description: Cleaned delivery events for posts.
+  - name: stg_substack__post_opens
+    description: Cleaned open events for posts.
