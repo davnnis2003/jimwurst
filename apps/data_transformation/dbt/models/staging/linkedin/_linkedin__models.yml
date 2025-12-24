@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: stg_linkedin__connections
+    description: Normalized LinkedIn connections sourced from the full archive export.
+    config:
+      tags: ["staging", "linkedin"]
+    columns:
+      - name: connection_name
+        description: Full name of the connection.
+      - name: company
+        description: Current company if provided.
+      - name: position
+        description: Role or title if provided.
+      - name: connected_on
+        description: Date the connection was established.
+  - name: stg_linkedin__messages
+    description: Flattened LinkedIn messages with sender/recipient context.
+    config:
+      tags: ["staging", "linkedin"]
+    columns:
+      - name: conversation_name
+        description: Conversation thread label.
+      - name: sender
+        description: Sender display name.
+      - name: body
+        description: Message text.
+      - name: sent_at
+        description: Timestamp message was sent.
+  - name: stg_linkedin__basic_content_demographics
+    description: Passthrough of demographics tab from LinkedIn basic content XLSX export.
+    config:
+      tags: ["staging", "linkedin", "basic_content"]
+  - name: stg_linkedin__basic_content_discovery
+    description: Passthrough of discovery tab from LinkedIn basic content XLSX export.
+    config:
+      tags: ["staging", "linkedin", "basic_content"]
+  - name: stg_linkedin__basic_content_engagement
+    description: Passthrough of engagement tab from LinkedIn basic content XLSX export.
+    config:
+      tags: ["staging", "linkedin", "basic_content"]
+  - name: stg_linkedin__basic_content_followers
+    description: Passthrough of followers tab from LinkedIn basic content XLSX export.
+    config:
+      tags: ["staging", "linkedin", "basic_content"]
+  - name: stg_linkedin__basic_content_top_posts
+    description: Passthrough of top posts tab from LinkedIn basic content XLSX export.
+    config:
+      tags: ["staging", "linkedin", "basic_content"]
+

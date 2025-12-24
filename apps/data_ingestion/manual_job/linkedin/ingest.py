@@ -7,6 +7,13 @@ from psycopg2.extras import execute_values
 from tqdm import tqdm
 from openpyxl import load_workbook
 
+# Optional dependency for richer Excel parsing; fallback to openpyxl if missing.
+try:
+    import pandas as pd  # type: ignore
+    HAS_PANDAS = True
+except Exception:
+    HAS_PANDAS = False
+
 # Import common utilities
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../utils'))
 from ingestion_utils import load_env, get_db_connection, ensure_schema, clean_header, sanitize_table_name
@@ -28,6 +35,21 @@ COMPLETE_PATH = os.path.join(DATA_PATH, "complete")
 SCHEMA_NAME = "s_linkedin"
 
 
+def dedupe_columns(columns):
+    """Ensure column names are unique by appending suffixes to duplicates."""
+    seen = {}
+    unique = []
+    for col in columns:
+        base = col
+        if base in seen:
+            seen[base] += 1
+            unique.append(f"{base}_{seen[base]}")
+        else:
+            seen[base] = 0
+            unique.append(base)
+    return unique
+
+
 class ExcelIngestor:
     """Handles ingestion of .xlsx files from basic creator insights exports"""
     
@@ -39,91 +61,180 @@ class ExcelIngestor:
         print(f"Processing Excel file: {table_name}...")
         
         try:
-            workbook = load_workbook(file_path, read_only=True, data_only=True)
-            
-            # Process each sheet in the workbook
-            for sheet_name in workbook.sheetnames:
-                sheet = workbook[sheet_name]
-                
-                # Create table name with sheet suffix if multiple sheets
-                if len(workbook.sheetnames) > 1:
-                    current_table_name = f"{table_name}_{sanitize_table_name(sheet_name)}"
-                else:
-                    current_table_name = table_name
-                
-                # Get headers from first row
-                rows = list(sheet.iter_rows(values_only=True))
-                if not rows:
-                    print(f"Skipping empty sheet: {sheet_name}")
+            if HAS_PANDAS:
+                self._ingest_with_pandas(file_path, table_name)
+            else:
+                self._ingest_with_openpyxl(file_path, table_name)
+        except Exception as e:
+            print(f"Error processing Excel file {file_path}: {e}")
+
+    def _ingest_with_pandas(self, file_path, table_name):
+        xls = pd.ExcelFile(file_path, engine="openpyxl")
+        for sheet_name in xls.sheet_names:
+            df_raw = xls.parse(sheet_name, dtype=str, header=None)
+            df_raw = df_raw.dropna(how="all")  # drop fully empty rows
+            df_raw = df_raw.dropna(axis=1, how="all")  # drop fully empty cols
+            if df_raw.empty:
+                print(f"Skipping empty sheet: {sheet_name}")
+                continue
+
+            # Choose header row: prefer first row with >=2 non-null cells; fallback to first non-empty.
+            header_idx = None
+            for idx, row in df_raw.iterrows():
+                non_null = row.dropna()
+                if len(non_null) >= 2:
+                    header_idx = idx
+                    break
+            if header_idx is None:
+                header_idx = df_raw.first_valid_index()
+            if header_idx is None:
+                print(f"Skipping sheet with no headers: {sheet_name}")
+                continue
+
+            header_row = df_raw.loc[header_idx]
+            columns = [
+                clean_header(str(h)) if (h is not None and str(h).strip() != "") else f"column_{i}"
+                for i, h in enumerate(header_row.tolist())
+            ]
+            columns = dedupe_columns(columns)
+
+            df = df_raw.loc[header_idx + 1 :].copy()
+            df.columns = columns
+            df = df.dropna(how="all")
+
+            if df.empty:
+                print(f"Skipping empty data after header in sheet: {sheet_name}")
+                continue
+
+            current_table_name = f"{table_name}_{sanitize_table_name(sheet_name)}" if len(xls.sheet_names) > 1 else table_name
+            self._write_dataframe(df, current_table_name)
+            print(f"  ✓ Ingested sheet '{sheet_name}' into table '{current_table_name}'")
+
+    def _write_dataframe(self, df, current_table_name):
+        cols_def = ", ".join([f"{sql.Identifier(c).as_string(self.conn)} TEXT" for c in df.columns])
+        create_query = sql.SQL("CREATE TABLE IF NOT EXISTS {}.{} ({})").format(
+            sql.Identifier(SCHEMA_NAME),
+            sql.Identifier(current_table_name),
+            sql.SQL(cols_def)
+        )
+        drop_query = sql.SQL("DROP TABLE IF EXISTS {}.{} CASCADE").format(
+            sql.Identifier(SCHEMA_NAME),
+            sql.Identifier(current_table_name)
+        )
+        insert_query = sql.SQL("INSERT INTO {}.{} VALUES %s").format(
+            sql.Identifier(SCHEMA_NAME),
+            sql.Identifier(current_table_name)
+        )
+
+        with self.conn.cursor() as cur:
+            cur.execute(drop_query)
+            cur.execute(create_query)
+        batch = df.where(pd.notnull(df), None).values.tolist()
+        if batch:
+            with self.conn.cursor() as cur:
+                execute_values(cur, insert_query, batch, page_size=1000)
+            self.conn.commit()
+
+    def _ingest_with_openpyxl(self, file_path, table_name):
+        workbook = load_workbook(file_path, data_only=True)
+
+        # Process each sheet in the workbook
+        for sheet_name in workbook.sheetnames:
+            sheet = workbook[sheet_name]
+
+            # Create table name with sheet suffix if multiple sheets
+            if len(workbook.sheetnames) > 1:
+                current_table_name = f"{table_name}_{sanitize_table_name(sheet_name)}"
+            else:
+                current_table_name = table_name
+
+            # Collect rows
+            rows = list(sheet.iter_rows(values_only=True))
+            if not rows:
+                print(f"Skipping empty sheet: {sheet_name}")
+                continue
+
+            def first_header_idx(rows):
+                for idx, row in enumerate(rows):
+                    if not row:
+                        continue
+                    non_null = [c for c in row if c is not None and str(c).strip() != ""]
+                    if len(non_null) >= 2:
+                        return idx
+                # fallback: first non-empty row
+                for idx, row in enumerate(rows):
+                    if row and any(cell is not None for cell in row):
+                        return idx
+                return None
+
+            header_idx = first_header_idx(rows)
+            if header_idx is None:
+                print(f"Skipping sheet with no headers: {sheet_name}")
+                continue
+
+            headers = rows[header_idx]
+            columns = [
+                clean_header(str(h)) if h is not None else f"column_{i}"
+                for i, h in enumerate(headers)
+            ]
+            columns = dedupe_columns(columns)
+
+            # Create table
+            cols_def = ", ".join([f"{sql.Identifier(c).as_string(self.conn)} TEXT" for c in columns])
+
+            create_query = sql.SQL("CREATE TABLE IF NOT EXISTS {}.{} ({})").format(
+                sql.Identifier(SCHEMA_NAME),
+                sql.Identifier(current_table_name),
+                sql.SQL(cols_def)
+            )
+
+            # Drop and recreate for idempotency
+            drop_query = sql.SQL("DROP TABLE IF EXISTS {}.{} CASCADE").format(
+                sql.Identifier(SCHEMA_NAME),
+                sql.Identifier(current_table_name)
+            )
+
+            with self.conn.cursor() as cur:
+                cur.execute(drop_query)
+                cur.execute(create_query)
+
+            # Insert data (rows after header). Skip rows that are entirely empty.
+            insert_query = sql.SQL("INSERT INTO {}.{} VALUES %s").format(
+                sql.Identifier(SCHEMA_NAME),
+                sql.Identifier(current_table_name)
+            )
+
+            data_rows = []
+            batch_size = 1000
+
+            for row in rows[header_idx + 1:]:
+                if not row or all(val is None for val in row):
                     continue
-                
-                headers = rows[0]
-                if not headers or all(h is None for h in headers):
-                    print(f"Skipping sheet with no headers: {sheet_name}")
-                    continue
-                
-                # Clean headers and filter out None values
-                columns = [clean_header(str(h)) if h is not None else f"column_{i}" 
-                          for i, h in enumerate(headers)]
-                
-                # Create table
-                cols_def = ", ".join([f"{sql.Identifier(c).as_string(self.conn)} TEXT" for c in columns])
-                
-                create_query = sql.SQL("CREATE TABLE IF NOT EXISTS {}.{} ({})").format(
-                    sql.Identifier(SCHEMA_NAME),
-                    sql.Identifier(current_table_name),
-                    sql.SQL(cols_def)
-                )
-                
-                # Drop and recreate for idempotency
-                drop_query = sql.SQL("DROP TABLE IF EXISTS {}.{} CASCADE").format(
-                    sql.Identifier(SCHEMA_NAME),
-                    sql.Identifier(current_table_name)
-                )
-                
-                with self.conn.cursor() as cur:
-                    cur.execute(drop_query)
-                    cur.execute(create_query)
-                
-                # Insert data (skip header row)
-                insert_query = sql.SQL("INSERT INTO {}.{} VALUES %s").format(
-                    sql.Identifier(SCHEMA_NAME),
-                    sql.Identifier(current_table_name)
-                )
-                
-                data_rows = []
-                batch_size = 1000
-                
-                for row in rows[1:]:  # Skip header
-                    # Convert all values to strings, handle None
-                    processed_row = [str(val) if val is not None else None for val in row]
-                    
-                    # Pad or truncate to match column count
-                    if len(processed_row) < len(columns):
-                        processed_row += [None] * (len(columns) - len(processed_row))
-                    elif len(processed_row) > len(columns):
-                        processed_row = processed_row[:len(columns)]
-                    
-                    data_rows.append(processed_row)
-                    
-                    if len(data_rows) >= batch_size:
-                        with self.conn.cursor() as cur:
-                            execute_values(cur, insert_query, data_rows)
-                        self.conn.commit()
-                        data_rows = []
-                
-                # Insert remaining rows
-                if data_rows:
+
+                processed_row = [str(val) if val is not None else None for val in row]
+
+                if len(processed_row) < len(columns):
+                    processed_row += [None] * (len(columns) - len(processed_row))
+                elif len(processed_row) > len(columns):
+                    processed_row = processed_row[:len(columns)]
+
+                data_rows.append(processed_row)
+
+                if len(data_rows) >= batch_size:
                     with self.conn.cursor() as cur:
                         execute_values(cur, insert_query, data_rows)
                     self.conn.commit()
-                
-                print(f"  ✓ Ingested sheet '{sheet_name}' into table '{current_table_name}'")
-            
-            workbook.close()
-            
-        except Exception as e:
-            print(f"Error processing Excel file {file_path}: {e}")
+                    data_rows = []
+
+            # Insert remaining rows
+            if data_rows:
+                with self.conn.cursor() as cur:
+                    execute_values(cur, insert_query, data_rows)
+                self.conn.commit()
+
+            print(f"  ✓ Ingested sheet '{sheet_name}' into table '{current_table_name}'")
+
+        workbook.close()
 
 
 class CSVIngestor:
@@ -146,8 +257,14 @@ class CSVIngestor:
                     print(f"Skipping empty file: {file_path}")
                     return
 
-                # Sanitize column names
-                columns = [clean_header(h) for h in headers]
+                # Sanitize and dedupe column names
+                columns = []
+                for i, h in enumerate(headers):
+                    if h is None or str(h).strip() == "":
+                        columns.append(f"column_{i}")
+                    else:
+                        columns.append(clean_header(h))
+                columns = dedupe_columns(columns)
                 
                 # Create table
                 cols_def = ", ".join([f"{sql.Identifier(c).as_string(self.conn)} TEXT" for c in columns])
@@ -198,6 +315,7 @@ class CSVIngestor:
                     self.conn.commit()
                     
         except Exception as e:
+            self.conn.rollback()
             print(f"Error processing CSV file {file_path}: {e}")
 
 
@@ -284,16 +402,18 @@ def main():
     print(f"Total Size: {total_size_mb:.2f} MB")
     print(f"Estimated Processing Time: ~{estimated_seconds:.1f} seconds")
     
-    # User Confirmation
-    try:
-        response = input("\nDo you want to proceed with LinkedIn data ingestion? (y/N): ").strip().lower()
-    except KeyboardInterrupt:
-        print("\nOperation cancelled.")
-        sys.exit(0)
+    auto_confirm = ('--yes' in sys.argv) or ('-y' in sys.argv)
+
+    if not auto_confirm:
+        try:
+            response = input("\nDo you want to proceed with LinkedIn data ingestion? (y/N): ").strip().lower()
+        except KeyboardInterrupt:
+            print("\nOperation cancelled.")
+            sys.exit(0)
         
-    if response != 'y':
-        print("Operation cancelled.")
-        sys.exit(0)
+        if response != 'y':
+            print("Operation cancelled.")
+            sys.exit(0)
 
     print("\nStarting ingestion...")
     print("=" * 50)

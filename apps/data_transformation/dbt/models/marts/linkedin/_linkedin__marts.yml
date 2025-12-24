@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: fct_linkedin_posts
+    config:
+      tags: ["marts", "linkedin", "posts"]
+    columns:
+      - name: post_url
+        tests:
+          - not_null
+      - name: posted_at
+        tests:
+          - not_null
+      - name: posted_date
+

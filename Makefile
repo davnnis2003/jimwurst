@@ -68,3 +68,8 @@ ingest-telegram:
 ingest-spotify:
 	@echo "Running Spotify ingestion..."
 	@.venv/bin/python3 apps/data_ingestion/manual_job/spotify/ingest.py
+
+.PHONY: transform-linkedin
+transform-linkedin:
+	@echo "Running LinkedIn dbt transformations..."
+	@cd apps/data_transformation/dbt && ../../../.venv/bin/dbt build --select source:linkedin+ --vars '{"enable_linkedin_models": true}'
