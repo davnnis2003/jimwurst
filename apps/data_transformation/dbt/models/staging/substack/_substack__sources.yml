@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: substack
+    schema: s_substack
+    description: Raw Substack exports loaded by manual ingestion scripts.
+    tables:
+      - name: posts
+        description: Combined metadata for all Substack posts.
+      - name: emails
+        description: Combined subscriber list from Substack.
+      - name: post_delivers
+        description: Combined delivery events for all Substack posts.
+      - name: post_opens
+        description: Combined open events for all Substack posts.

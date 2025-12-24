@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: dim_substack__posts
+    description: Dimension table containing metadata for all Substack posts.
+    columns:
+      - name: post_id
+        description: Unique identifier for the post.
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_substack__subscribers
+    description: Dimension table containing information about Substack subscribers.
+    columns:
+      - name: email
+        description: Subscriber email address.
+        tests:
+          - unique
+          - not_null
+
+  - name: fct_substack__post_events
+    description: >
+      Unified fact table for all post-related events, including deliveries and opens.
+      This table combines data from both the raw delivery logs and opening logs.
+    columns:
+      - name: event_key
+        description: Unique surrogate key for the event.
+        tests:
+          - unique
+          - not_null
+      - name: post_id
+        description: ID of the post the event relates to.
+      - name: event_type
+        description: Type of event (e.g., 'delivery', 'open').
+      - name: post_title
+        description: Title of the post from dim_substack__posts.
+      - name: post_subtitle
+        description: Subtitle of the post from dim_substack__posts.
+      - name: post_published_at
+        description: Original publication timestamp of the post.
