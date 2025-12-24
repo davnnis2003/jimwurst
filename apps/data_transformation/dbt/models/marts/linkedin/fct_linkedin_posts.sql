@@ -48,6 +48,8 @@ extracted as (
                 raw->>'published_at_1',
                 raw->>'published_on',
                 raw->>'published_on_1',
+                raw->>'post_publish_date',
+                raw->>'post_publish_date_1',
                 raw->>'time',
                 raw->>'time_1'
             ),
@@ -62,16 +64,16 @@ standardized as (
 
         case
             when extracted_posted_at_text is null then null::timestamp
-            when extracted_posted_at_text ~ '^\\d{4}-\\d{2}-\\d{2}($|[ T]\\d{2}:\\d{2})' then cast(extracted_posted_at_text as timestamp)
-            when extracted_posted_at_text ~ '^\\d{1,2}/\\d{1,2}/\\d{4}' then to_timestamp(extracted_posted_at_text, 'MM/DD/YYYY')::timestamp
+            when extracted_posted_at_text ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}($|[ T][0-9]{2}:[0-9]{2})' then cast(extracted_posted_at_text as timestamp)
+            when extracted_posted_at_text ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}' then to_timestamp(extracted_posted_at_text, 'MM/DD/YYYY')::timestamp
             else null::timestamp
         end as posted_at,
 
         cast(
             case
                 when extracted_posted_at_text is null then null::timestamp
-                when extracted_posted_at_text ~ '^\\d{4}-\\d{2}-\\d{2}($|[ T]\\d{2}:\\d{2})' then cast(extracted_posted_at_text as timestamp)
-                when extracted_posted_at_text ~ '^\\d{1,2}/\\d{1,2}/\\d{4}' then to_timestamp(extracted_posted_at_text, 'MM/DD/YYYY')::timestamp
+                when extracted_posted_at_text ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}($|[ T][0-9]{2}:[0-9]{2})' then cast(extracted_posted_at_text as timestamp)
+                when extracted_posted_at_text ~ '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}' then to_timestamp(extracted_posted_at_text, 'MM/DD/YYYY')::timestamp
                 else null::timestamp
             end as date
         ) as posted_date,
@@ -84,4 +86,3 @@ select *
 from standardized
 where post_url is not null
   and posted_at is not null
-

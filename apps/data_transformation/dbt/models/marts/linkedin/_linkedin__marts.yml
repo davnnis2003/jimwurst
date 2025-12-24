@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: fct_linked_posts
+  - name: fct_linkedin_posts
     config:
       tags: ["marts", "linkedin", "posts"]
     columns:
