@@ -402,6 +402,8 @@ groups:
 #### Seeds
 - **For lookup tables**: Static data not in sources (e.g., zip codes).
 - **Not for source data**: Use ELT tools for loading.
+- **Naming**: If a seed represents a final dimension for consumption, name it `dim_<name>.csv` (e.g., `dim_public_holidays.csv`).
+- **Schema Hygiene**: Always map seeds to their appropriate schema (`staging` or `marts`) in `dbt_project.yml`. Never leave seeds in the default `public` schema.
 
 #### Analyses
 - **For auditing queries**: Version-control checks with `dbt-audit-helper`.

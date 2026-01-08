@@ -36,6 +36,9 @@ models:
     marts:
       +materialized: table
       +schema: marts
+seeds:
+  jimwurst:
+    +schema: marts
 
 vars:
   enable_linkedin_models: false
