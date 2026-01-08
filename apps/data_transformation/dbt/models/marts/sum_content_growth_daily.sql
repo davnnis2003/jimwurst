@@ -22,6 +22,11 @@ substack_daily as (
 final as (
     select
         coalesce(l.activity_date, s.activity_date)::date as date_berlin,
+        extract(dow from coalesce(l.activity_date, s.activity_date)) as day_of_week,
+        extract(day from coalesce(l.activity_date, s.activity_date)) as day_of_month,
+        extract(month from coalesce(l.activity_date, s.activity_date)) as month,
+        extract(year from coalesce(l.activity_date, s.activity_date)) as year,
+        (extract(dow from coalesce(l.activity_date, s.activity_date)) in (0, 6)) as is_weekend,
         coalesce(l.linkedin_posts_published, 0) as linkedin_posts_published,
         coalesce(s.substack_posts_published, 0) as substack_posts_published
     from linkedin_daily l
