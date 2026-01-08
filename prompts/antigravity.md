@@ -43,7 +43,9 @@ Each application follows a strict modular structure using `snake_case`. Tooling 
 - **Activation**: Metabase / Lightdash, Jupyter, Ollama (AI).
 
 ### Schema naming directive
-- Staging models must use the `staging` schema (do not use `public_staging`); macros are configured to enforce this.
+- Staging models must use the `staging` schema (do not use `public_staging`).
+- **Convention**: Data should NEVER be left in the `public` schema. All models and seeds must be explicitly mapped to `staging`, `intermediate`, or `marts`.
+- **Seed Naming**: Seeds that serve as dimensions should be prefixed with `dim_` (e.g., `dim_public_holidays.csv`).
 
 ## 💡 Architectural Principles
 1. **Tools Agnostic**: Logic should be separated from specific tools. If we swap Airbyte for something else, the `data-ingestion` logic should remain clear.
