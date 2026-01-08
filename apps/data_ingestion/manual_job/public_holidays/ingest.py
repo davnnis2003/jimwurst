@@ -18,7 +18,7 @@ YEARS = range(START_YEAR, END_YEAR + 1)
 
 # Output path (dbt seeds)
 OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../data_transformation/dbt/seeds"))
-OUTPUT_FILE = os.path.join(OUTPUT_DIR, "dim_public_holidays.csv")
+OUTPUT_FILE = os.path.join(OUTPUT_DIR, "public_holidays.csv")
 
 def get_all_supported_countries():
     """Dynamically fetch all supported country codes from the holidays library."""
