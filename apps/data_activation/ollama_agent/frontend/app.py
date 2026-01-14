@@ -2,6 +2,8 @@
 import streamlit as st
 import os
 import sys
+import subprocess
+import signal
 
 # Add project root to sys.path to allow imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -32,6 +34,18 @@ with st.sidebar:
             st.success("Connected to Ollama!")
         else:
             st.error("Could not connect to Ollama.")
+
+    st.markdown("---")
+    if st.button("Shutdown System", type="primary"):
+        with st.spinner("Shutting down services..."):
+            try:
+                # Run 'make down' to stop Docker containers
+                subprocess.run(["make", "down"], check=True, cwd=project_root)
+                st.success("Services stopped. Exiting application...")
+                # Kill the current Streamlit process
+                os.kill(os.getpid(), signal.SIGTERM)
+            except Exception as e:
+                st.error(f"Error during shutdown: {e}")
 
 # Initialize Session State
 if "messages" not in st.session_state:
