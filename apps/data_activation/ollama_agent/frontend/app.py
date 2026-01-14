@@ -141,30 +141,18 @@ if next_prompt:
                      st.session_state.agent = JimwurstAgent(model_name=model_name)
                 
                 try:
-                    # Call the agent - capture both stdout and stderr
-                    import io
-                    import contextlib
+                    # Import our custom callback
+                    from utils.streamlit_callback import StreamlitThinkingCallback
                     
-                    # Capture stdout and stderr
-                    stdout_capture = io.StringIO()
-                    stderr_capture = io.StringIO()
+                    # Create callback handler pointing to the placeholder
+                    st_callback = StreamlitThinkingCallback(thoughts_placeholder)
                     
-                    with contextlib.redirect_stdout(stdout_capture), contextlib.redirect_stderr(stderr_capture):
-                        response = st.session_state.agent.chat(next_prompt)
+                    # Call the agent with the callback
+                    response, intermediate_steps = st.session_state.agent.chat(next_prompt, callbacks=[st_callback])
                     
-                    # Get captured output
-                    captured_stdout = stdout_capture.getvalue()
-                    captured_stderr = stderr_capture.getvalue()
-                    
-                    # Combine outputs
-                    captured_output = captured_stdout + captured_stderr
-                    
-                    if captured_output.strip():
-                        thoughts_text += f"```\n{captured_output}\n```"
-                    else:
-                        thoughts_text += "*No verbose output captured - check console logs*\n"
-                    
-                    thoughts_placeholder.markdown(thoughts_text)
+                    # If we got response but callback didn't run (unlikely but possible), show something
+                    if not st_callback.text:
+                        thoughts_placeholder.markdown("*Processed without detailed steps*")
                     
                 except Exception as e:
                     response = f"Error: {str(e)}"

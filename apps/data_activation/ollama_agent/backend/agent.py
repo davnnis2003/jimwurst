@@ -62,76 +62,81 @@ class JimwurstAgent:
             pass
         return False
 
-    def _get_sql_agent(self):
+    def _get_sql_agent(self, db):
         """Creates an SQL agent for querying the database."""
-        from utils.ingestion_utils import load_env
-        load_env()
-        
-        DB_HOST = os.getenv("DB_HOST", "localhost")
-        DB_NAME = os.getenv("POSTGRES_DB", "jimwurst")
-        DB_USER = os.getenv("POSTGRES_USER", "jimwurst")
-        DB_PASS = os.getenv("POSTGRES_PASSWORD", "jimwurst")
-        DB_PORT = os.getenv("DB_PORT", "5432")
-        
-        db_uri = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-        db = SQLDatabase.from_uri(db_uri)
-        
-        # Custom prefix to teach the agent about the data warehouse schema structure
-        sql_prefix = """You are an agent designed to interact with a SQL database.
-
-CRITICAL WORKFLOW - READ THIS CAREFULLY:
-1. FIRST: Use sql_db_list_tables to see what tables actually exist in the database
-2. THEN: Generate and execute queries based on the ACTUAL tables you discovered
-3. FINALLY: Return the RESULTS in natural language, NOT the SQL query itself
-
-Your final answer must ALWAYS be the query RESULTS, never SQL code (unless the user explicitly asks to see the query).
-
-DATA WAREHOUSE SCHEMA STRUCTURE:
-The database (jimwurst_db) follows a layered data warehouse architecture:
-
-1. INGESTED DATA (Raw Sources):
-   - Schemas starting with 's_' (e.g., s_substack, s_linkedin, s_telegram, s_bolt)
-   - These contain raw data ingested from various applications
-
-2. CURATED & TRANSFORMED DATA:
-   - Schema: 'intermediate'
-   - Contains data that has been cleaned and transformed
-
-3. INSIGHT-READY DATA (Analytics):
-   - Schema: 'marts'
-   - Contains final analytical models ready for reporting and insights
-
-ANSWERING METADATA QUESTIONS:
-When asked "What data is being ingested?" or "What data is curated?" or "What data is ready for insights?":
-
-Step 1: Use sql_db_list_tables to discover all tables
-Step 2: Filter the results to show:
-   - For ingested data: tables in schemas starting with 's_'
-   - For curated data: tables in 'intermediate' schema
-   - For insights data: tables in 'marts' schema
-Step 3: Return a natural language summary like:
-   "The following data sources are being ingested: [list of schemas/applications based on s_* schemas]"
-
-IMPORTANT RULES:
-- ALWAYS use sql_db_list_tables FIRST before writing any queries
-- Use sql_db_schema to understand table structure if needed
-- NEVER assume table names - always check what actually exists
-- Return RESULTS in natural language, not SQL code
-- Limit results to 5 rows unless user asks for more
-- Only query relevant columns, not SELECT *
-- NO DML statements (INSERT, UPDATE, DELETE, DROP)
-
-If the question is not database-related, return "I don't know".
-"""
-        
-        
         # Custom error handler for parsing errors
         def handle_parsing_error(error) -> str:
-            return f"I encountered an issue processing that request. Let me try a simpler approach. Error: {str(error)[:100]}"
+            error_str = str(error)
+            if "SELECT" in error_str or "Action:" in error_str:
+                return f"I had a parsing error. I will try to be more concise. Error: {error_str[:50]}"
+            return f"I encountered an issue. Let me try a simpler approach. Error: {error_str[:100]}"
         
+        # Helper to clean SQL from the agent
+        def clean_sql(query: str) -> str:
+            query = query.strip()
+            # Remove markdown code blocks if present
+            if "```" in query:
+                import re
+                match = re.search(r"```(?:sql)?\s*(.*?)\s*```", query, re.DOTALL | re.IGNORECASE)
+                if match:
+                    query = match.group(1)
+                else:
+                    query = query.replace("```sql", "").replace("```", "")
+            
+            # Remove leading "sql" if the model adds it outside backticks
+            if query.lower().startswith("sql"):
+                query = query[3:].strip()
+                
+            return query.strip("` \n\t;")
+
+        # Custom prefix to teach the agent about the data warehouse schema structure
+        sql_prefix = """You are an agent designed to interact with a SQL database.
+All relevant schemas (marts, intermediate, staging, s_*) are in your search path.
+
+CRITICAL RULES:
+1. NEVER include markdown backticks (```) or the word "sql" in your tool inputs. Only provide raw SQL.
+2. PUBLIC SCHEMA IS EMPTY. Do NOT query `information_schema` filtering for `table_schema = 'public'`.
+3. SEARCH THE DATA:
+   - For INSIGHTS/ANALYTICS: Look for tables in the `marts` schema.
+   - For CURATED DATA: Look for tables in the `intermediate` schema.
+   - For RAW DATA: Look for tables in `s_` schemas.
+
+WORKFLOW:
+1. Use `sql_db_list_tables` to see ALL tables.
+2. Identify relevant tables (e.g., those starting with `dim_`, `fct_`, or in `marts`/`intermediate`).
+3. Use `sql_db_schema` to see columns.
+4. Execute query and return natural language RESULTS.
+"""
+
+        # Custom Toolkit with cleaned query tool
+        from langchain_community.agent_toolkits import SQLDatabaseToolkit
+        from langchain.tools import Tool as LangChainTool
+        
+        toolkit = SQLDatabaseToolkit(db=db, llm=self.llm)
+        original_tools = toolkit.get_tools()
+        cleaned_tools = []
+        
+        for t in original_tools:
+            if t.name == "sql_db_query":
+                # Create a wrapper that cleans the SQL before calling the original tool
+                def wrapped_query(query: str, tool=t):
+                    cleaned = clean_sql(query)
+                    return tool.run(cleaned)
+                
+                # Create a new Tool with the same metadata but our wrapped function
+                new_tool = LangChainTool(
+                    name=t.name,
+                    description=t.description,
+                    func=wrapped_query
+                )
+                cleaned_tools.append(new_tool)
+            else:
+                cleaned_tools.append(t)
+
         return create_sql_agent(
             llm=self.llm,
-            toolkit=None,
+            toolkit=None,  # Pass tools directly
+            tools=cleaned_tools,
             db=db,
             verbose=True,
             agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
@@ -142,30 +147,41 @@ If the question is not database-related, return "I don't know".
         )
 
     def _setup_agent(self):
-        tools = [
-            ingest_data_tool,
-            run_transformations_tool
-        ]
+        from utils.ingestion_utils import load_env
+        load_env()
         
-        sql_agent_executor = self._get_sql_agent()
+        DB_HOST = os.getenv("DB_HOST", "localhost")
+        DB_NAME = os.getenv("POSTGRES_DB", "jimwurst")
+        DB_USER = os.getenv("POSTGRES_USER", "jimwurst")
+        DB_PASS = os.getenv("POSTGRES_PASSWORD", "jimwurst")
+        DB_PORT = os.getenv("DB_PORT", "5432")
         
+        # Define the schemas we want to include in our search path
+        schemas = "public,marts,intermediate,staging,s_spotify,s_linkedin,s_substack,s_telegram,s_bolt,s_apple_health,s_google_sheet"
+        
+        # Update URI to include search_path
+        db_uri = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}?options=-csearch_path%3D{schemas}"
+        db = SQLDatabase.from_uri(db_uri)
+
+        sql_agent_executor = self._get_sql_agent(db)
+
         @tool
-        def query_database_tool(query: str):
-            """
-            Useful for when you need to answer questions about data in the database. 
-            Input should be a natural language question.
-            The tool will convert it to SQL, execute it, and return the answer.
-            """
+        def query_database_tool(query_description: str):
+            """Useful for when you need to answer questions about data in the Data Warehouse. 
+            Input should be a natural language question about the data."""
             try:
-                result = sql_agent_executor.invoke({"input": query})
-                # Extract the output if it's a dict
-                if isinstance(result, dict) and 'output' in result:
-                    return result['output']
+                result = sql_agent_executor.invoke({"input": query_description})
+                if isinstance(result, dict):
+                    return result.get("output", str(result))
                 return str(result)
             except Exception as e:
-                return f"I encountered an error querying the database: {str(e)[:200]}. Please try rephrasing your question."
+                return f"Error querying database: {str(e)}"
 
-        tools.append(query_database_tool)
+        tools = [
+            ingest_data_tool,
+            run_transformations_tool,
+            query_database_tool
+        ]
 
         # Custom error handler for the main agent
         def handle_main_agent_error(error) -> str:
@@ -180,6 +196,7 @@ If the question is not database-related, return "I don't know".
             max_iterations=10,
             max_execution_time=120,
         )
+
 
     def chat(self, prompt: str, callbacks=None):
         """Sends a message to the agent and returns the response.
