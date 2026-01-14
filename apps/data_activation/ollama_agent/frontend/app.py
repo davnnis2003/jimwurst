@@ -123,43 +123,41 @@ if next_prompt:
 
     # Generate Response
     with st.chat_message("assistant", avatar="🌭"):
-        # Create a container for streaming thoughts
-        thinking_container = st.container()
-        response_container = st.empty()
-        
-        with thinking_container:
-            with st.expander("🧠 Agent Thinking Process", expanded=True):
+        # Create a status container for the thinking process (Perplexity-style)
+        with st.status("🧠 Agent Thinking Process...", expanded=False) as status:
+            # Use a container with fixed height to enable scrolling
+            # This will automatically stick to the bottom as new content is added
+            with st.container(height=300, border=False):
                 thoughts_placeholder = st.empty()
+            
+            # Ensure agent model matches sidebar
+            if st.session_state.agent.model_name != model_name:
+                 st.session_state.agent = JimwurstAgent(model_name=model_name)
+            
+            try:
+                # Import our custom callback
+                from utils.streamlit_callback import StreamlitThinkingCallback
                 
-                # We'll capture the verbose output by modifying the agent's chat method
-                # For now, let's show a status
-                thoughts_text = "**Starting agent...**\n\n"
-                thoughts_placeholder.markdown(thoughts_text)
+                # Create callback handler pointing to the placeholder
+                st_callback = StreamlitThinkingCallback(thoughts_placeholder)
                 
-                # Ensure agent model matches sidebar
-                if st.session_state.agent.model_name != model_name:
-                     st.session_state.agent = JimwurstAgent(model_name=model_name)
+                # Call the agent with the callback
+                response, intermediate_steps = st.session_state.agent.chat(next_prompt, callbacks=[st_callback])
                 
-                try:
-                    # Import our custom callback
-                    from utils.streamlit_callback import StreamlitThinkingCallback
-                    
-                    # Create callback handler pointing to the placeholder
-                    st_callback = StreamlitThinkingCallback(thoughts_placeholder)
-                    
-                    # Call the agent with the callback
-                    response, intermediate_steps = st.session_state.agent.chat(next_prompt, callbacks=[st_callback])
-                    
-                    # If we got response but callback didn't run (unlikely but possible), show something
-                    if not st_callback.text:
-                        thoughts_placeholder.markdown("*Processed without detailed steps*")
-                    
-                except Exception as e:
-                    response = f"Error: {str(e)}"
-                    thoughts_text += f"\n\n**Error occurred:** {str(e)}"
-                    thoughts_placeholder.markdown(thoughts_text)
+                # If we got response but callback didn't run (unlikely but possible), show something
+                if not st_callback.text:
+                    thoughts_placeholder.markdown("*Processed without detailed steps*")
+                
+                # Mark status as complete
+                status.update(label="🧠 Agent Thinking Process - Complete", state="complete", expanded=False)
+                
+            except Exception as e:
+                response = f"Error: {str(e)}"
+                thoughts_placeholder.markdown(f"\n\n**Error occurred:** {str(e)}")
+                status.update(label="🧠 Agent Thinking Process - Error", state="error", expanded=True)
         
-        response_container.markdown(f"**Answer:**\n\n{response}")
+        # Display the final answer outside the status box
+        st.markdown(f"**Answer:**\n\n{response}")
     
     # Add assistant message to state
     st.session_state.messages.append({"role": "assistant", "content": response})
