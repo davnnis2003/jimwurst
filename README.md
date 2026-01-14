@@ -15,6 +15,38 @@ A very core idea here is **tools agnostic**. Any tooling in modern data stack wi
 
 The pholosophy behind can be found in [Data Biz](https://jimmypang.substack.com/s/engineering-value-at-scale).
 
+# 🧠 AI Agent (New!)
+
+`jimwurst` now features an AI-powered interaction layer powered by [Ollama](https://ollama.com/) and [LangChain](https://www.langchain.com/).
+
+## Prerequisites
+1.  Install [Ollama](https://ollama.com/download).
+2.  Pull the model: `ollama pull qwen2.5:3b`.
+3.  Ensure your local Postgres stack is running (`make up`).
+
+## Usage
+
+You can interact with the agent in **GUI Mode** (Recommended) or **CLI Mode**.
+
+**GUI Mode:**
+```bash
+uv run streamlit run apps/data_activation/ollama_agent/frontend/app.py
+```
+This launches a web interface at `http://localhost:8501`.
+
+**CLI Mode:**
+```bash
+# Interactive
+uv run python apps/data_activation/ollama_agent/backend/agent.py --interactive
+# Single Prompt
+uv run python apps/data_activation/ollama_agent/backend/agent.py --prompt "Ingest data from /path/to/data.csv"
+```
+
+## Capabilities
+*   **Ingest Data**: "Ingest file /path/to/file.csv"
+*   **Transform Data**: "Run transformations"
+*   **Ask Questions**: "How many users are in the users table?"
+
 # Python Environment Setup
 
 This project uses [uv](https://github.com/astral-sh/uv) for fast, reliable Python dependency management.
