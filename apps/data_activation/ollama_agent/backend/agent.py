@@ -78,50 +78,56 @@ class JimwurstAgent:
         
         # Custom prefix to teach the agent about the data warehouse schema structure
         sql_prefix = """You are an agent designed to interact with a SQL database.
-Given an input question, create a syntactically correct PostgreSQL query to run, then look at the results of the query and return the answer.
 
-IMPORTANT - DATA WAREHOUSE SCHEMA STRUCTURE:
-The database follows a layered data warehouse architecture:
+CRITICAL WORKFLOW - READ THIS CAREFULLY:
+1. FIRST: Use sql_db_list_tables to see what tables actually exist in the database
+2. THEN: Generate and execute queries based on the ACTUAL tables you discovered
+3. FINALLY: Return the RESULTS in natural language, NOT the SQL query itself
+
+Your final answer must ALWAYS be the query RESULTS, never SQL code (unless the user explicitly asks to see the query).
+
+DATA WAREHOUSE SCHEMA STRUCTURE:
+The database (jimwurst_db) follows a layered data warehouse architecture:
 
 1. INGESTED DATA (Raw Sources):
-   - Located in schemas that start with 's_' (e.g., s_substack, s_linkedin, s_telegram, s_bolt, etc.)
+   - Schemas starting with 's_' (e.g., s_substack, s_linkedin, s_telegram, s_bolt)
    - These contain raw data ingested from various applications
-   - To find all ingested data sources, use:
-     SELECT DISTINCT table_schema, table_name 
-     FROM information_schema.tables 
-     WHERE table_schema LIKE 's_%' 
-     ORDER BY table_schema, table_name;
 
 2. CURATED & TRANSFORMED DATA:
-   - Located in the 'intermediate' schema
+   - Schema: 'intermediate'
    - Contains data that has been cleaned and transformed
-   - To find curated tables, use:
-     SELECT table_name FROM information_schema.tables WHERE table_schema = 'intermediate';
 
 3. INSIGHT-READY DATA (Analytics):
-   - Located in the 'marts' schema
+   - Schema: 'marts'
    - Contains final analytical models ready for reporting and insights
-   - To find insight-ready tables, use:
-     SELECT table_name FROM information_schema.tables WHERE table_schema = 'marts';
 
-When asked about:
-- "What data is being ingested" → Query schemas starting with 's_'
-- "What data is curated/transformed" → Query the 'intermediate' schema
-- "What data is ready for insights" → Query the 'marts' schema
+ANSWERING METADATA QUESTIONS:
+When asked "What data is being ingested?" or "What data is curated?" or "What data is ready for insights?":
 
-Always use information_schema to discover tables and schemas. Never assume table names exist without checking first.
+Step 1: Use sql_db_list_tables to discover all tables
+Step 2: Filter the results to show:
+   - For ingested data: tables in schemas starting with 's_'
+   - For curated data: tables in 'intermediate' schema
+   - For insights data: tables in 'marts' schema
+Step 3: Return a natural language summary like:
+   "The following data sources are being ingested: [list of schemas/applications based on s_* schemas]"
 
-Unless the user specifies a specific number of examples they wish to obtain, always limit your query to at most 5 results.
-You can order the results by a relevant column to return the most interesting examples in the database.
-Never query for all the columns from a specific table, only ask for the relevant columns given the question.
-You have access to tools for interacting with the database.
-Only use the given tools. Only use the information returned by the tools to construct your final answer.
-You MUST double check your query before executing it. If you get an error while executing a query, rewrite the query and try again.
+IMPORTANT RULES:
+- ALWAYS use sql_db_list_tables FIRST before writing any queries
+- Use sql_db_schema to understand table structure if needed
+- NEVER assume table names - always check what actually exists
+- Return RESULTS in natural language, not SQL code
+- Limit results to 5 rows unless user asks for more
+- Only query relevant columns, not SELECT *
+- NO DML statements (INSERT, UPDATE, DELETE, DROP)
 
-DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the database.
-
-If the question does not seem related to the database, just return "I don't know" as the answer.
+If the question is not database-related, return "I don't know".
 """
+        
+        
+        # Custom error handler for parsing errors
+        def handle_parsing_error(error) -> str:
+            return f"I encountered an issue processing that request. Let me try a simpler approach. Error: {str(error)[:100]}"
         
         return create_sql_agent(
             llm=self.llm,
@@ -129,8 +135,10 @@ If the question does not seem related to the database, just return "I don't know
             db=db,
             verbose=True,
             agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-            handle_parsing_errors=True,
+            handle_parsing_errors=handle_parsing_error,
             prefix=sql_prefix,
+            max_iterations=10,
+            max_execution_time=60,
         )
 
     def _setup_agent(self):
@@ -148,16 +156,29 @@ If the question does not seem related to the database, just return "I don't know
             Input should be a natural language question.
             The tool will convert it to SQL, execute it, and return the answer.
             """
-            return sql_agent_executor.invoke({"input": query})
+            try:
+                result = sql_agent_executor.invoke({"input": query})
+                # Extract the output if it's a dict
+                if isinstance(result, dict) and 'output' in result:
+                    return result['output']
+                return str(result)
+            except Exception as e:
+                return f"I encountered an error querying the database: {str(e)[:200]}. Please try rephrasing your question."
 
         tools.append(query_database_tool)
+
+        # Custom error handler for the main agent
+        def handle_main_agent_error(error) -> str:
+            return f"I had trouble processing that. Let me try again with a simpler approach."
 
         return initialize_agent(
             tools, 
             self.llm, 
             agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, 
             verbose=True,
-            handle_parsing_errors=True
+            handle_parsing_errors=handle_main_agent_error,
+            max_iterations=10,
+            max_execution_time=120,
         )
 
     def chat(self, prompt: str) -> str:
