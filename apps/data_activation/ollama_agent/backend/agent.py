@@ -68,9 +68,9 @@ class JimwurstAgent:
         load_env()
         
         DB_HOST = os.getenv("DB_HOST", "localhost")
-        DB_NAME = os.getenv("POSTGRES_DB", "jimwurst_db")
-        DB_USER = os.getenv("POSTGRES_USER", "jimwurst_user")
-        DB_PASS = os.getenv("POSTGRES_PASSWORD", "jimwurst_password")
+        DB_NAME = os.getenv("POSTGRES_DB", "jimwurst")
+        DB_USER = os.getenv("POSTGRES_USER", "jimwurst")
+        DB_PASS = os.getenv("POSTGRES_PASSWORD", "jimwurst")
         DB_PORT = os.getenv("DB_PORT", "5432")
         
         db_uri = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
@@ -82,6 +82,7 @@ class JimwurstAgent:
             db=db,
             verbose=True,
             agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+            handle_parsing_errors=True,
         )
 
     def _setup_agent(self):
