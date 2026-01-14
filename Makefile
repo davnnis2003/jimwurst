@@ -14,6 +14,12 @@ up: .init-dirs .check-ollama
 	@$(MAKE) .pull-model
 	@$(MAKE) .streamlit-up
 
+.PHONY: down
+down:
+	@echo "Stopping services..."
+	@docker-compose -f docker/docker-compose.yml down
+	@echo "Services stopped."
+
 .PHONY: .check-ollama
 .check-ollama:
 	@echo "Checking for Ollama..."
