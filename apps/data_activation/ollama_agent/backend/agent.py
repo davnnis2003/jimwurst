@@ -91,20 +91,21 @@ class JimwurstAgent:
 
         # Custom prefix to teach the agent about the data warehouse schema structure
         sql_prefix = """You are an agent designed to interact with a SQL database.
-All relevant schemas (marts, intermediate, staging, s_*) are in your search path.
+All relevant schemas (marts, s_*) are in your search path.
+
+CRITICAL SCHEMA PRIORITIES:
+1. MART SYSTEM: Use the `marts` schema for all analytical questions and insights. This is your primary source of truth.
+2. INGESTION SYSTEM: Use the `s_` schemas (e.g., s_substack, s_linkedin) only when debugging if raw data has been successfully ingested.
+3. IGNORE: Do NOT use or refer to the `staging` or `intermediate` schemas. They are internal layers that do not matter for user insights.
 
 CRITICAL RULES:
 1. NEVER include markdown backticks (```) or the word "sql" in your tool inputs. Only provide raw SQL.
 2. PUBLIC SCHEMA IS EMPTY. Do NOT query `information_schema` filtering for `table_schema = 'public'`.
-3. SEARCH THE DATA:
-   - For INSIGHTS/ANALYTICS: Look for tables in the `marts` schema.
-   - For CURATED DATA: Look for tables in the `intermediate` schema.
-   - For RAW DATA: Look for tables in `s_` schemas.
 
 WORKFLOW:
-1. Use `sql_db_list_tables` to see ALL tables.
-2. Identify relevant tables (e.g., those starting with `dim_`, `fct_`, or in `marts`/`intermediate`).
-3. Use `sql_db_schema` to see columns.
+1. Use `sql_db_list_tables` to see available tables (mainly in `marts` or `s_*`).
+2. Identify relevant tables in `marts` for insights.
+3. Use `sql_db_schema` to understand columns.
 4. Execute query and return natural language RESULTS.
 """
 
@@ -156,8 +157,8 @@ WORKFLOW:
         DB_PASS = os.getenv("POSTGRES_PASSWORD", "jimwurst")
         DB_PORT = os.getenv("DB_PORT", "5432")
         
-        # Define the schemas we want to include in our search path
-        schemas = "public,marts,intermediate,staging,s_spotify,s_linkedin,s_substack,s_telegram,s_bolt,s_apple_health,s_google_sheet"
+        # Define the schemas we want to include in our search path (Focusing only on what matters)
+        schemas = "public,marts,s_spotify,s_linkedin,s_substack,s_telegram,s_bolt,s_apple_health,s_google_sheet"
         
         # Update URI to include search_path
         db_uri = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}?options=-csearch_path%3D{schemas}"
