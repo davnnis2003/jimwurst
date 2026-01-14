@@ -76,6 +76,53 @@ class JimwurstAgent:
         db_uri = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
         db = SQLDatabase.from_uri(db_uri)
         
+        # Custom prefix to teach the agent about the data warehouse schema structure
+        sql_prefix = """You are an agent designed to interact with a SQL database.
+Given an input question, create a syntactically correct PostgreSQL query to run, then look at the results of the query and return the answer.
+
+IMPORTANT - DATA WAREHOUSE SCHEMA STRUCTURE:
+The database follows a layered data warehouse architecture:
+
+1. INGESTED DATA (Raw Sources):
+   - Located in schemas that start with 's_' (e.g., s_substack, s_linkedin, s_telegram, s_bolt, etc.)
+   - These contain raw data ingested from various applications
+   - To find all ingested data sources, use:
+     SELECT DISTINCT table_schema, table_name 
+     FROM information_schema.tables 
+     WHERE table_schema LIKE 's_%' 
+     ORDER BY table_schema, table_name;
+
+2. CURATED & TRANSFORMED DATA:
+   - Located in the 'intermediate' schema
+   - Contains data that has been cleaned and transformed
+   - To find curated tables, use:
+     SELECT table_name FROM information_schema.tables WHERE table_schema = 'intermediate';
+
+3. INSIGHT-READY DATA (Analytics):
+   - Located in the 'marts' schema
+   - Contains final analytical models ready for reporting and insights
+   - To find insight-ready tables, use:
+     SELECT table_name FROM information_schema.tables WHERE table_schema = 'marts';
+
+When asked about:
+- "What data is being ingested" → Query schemas starting with 's_'
+- "What data is curated/transformed" → Query the 'intermediate' schema
+- "What data is ready for insights" → Query the 'marts' schema
+
+Always use information_schema to discover tables and schemas. Never assume table names exist without checking first.
+
+Unless the user specifies a specific number of examples they wish to obtain, always limit your query to at most 5 results.
+You can order the results by a relevant column to return the most interesting examples in the database.
+Never query for all the columns from a specific table, only ask for the relevant columns given the question.
+You have access to tools for interacting with the database.
+Only use the given tools. Only use the information returned by the tools to construct your final answer.
+You MUST double check your query before executing it. If you get an error while executing a query, rewrite the query and try again.
+
+DO NOT make any DML statements (INSERT, UPDATE, DELETE, DROP etc.) to the database.
+
+If the question does not seem related to the database, just return "I don't know" as the answer.
+"""
+        
         return create_sql_agent(
             llm=self.llm,
             toolkit=None,
@@ -83,6 +130,7 @@ class JimwurstAgent:
             verbose=True,
             agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
             handle_parsing_errors=True,
+            prefix=sql_prefix,
         )
 
     def _setup_agent(self):
