@@ -181,11 +181,26 @@ If the question is not database-related, return "I don't know".
             max_execution_time=120,
         )
 
-    def chat(self, prompt: str) -> str:
-        """Sends a message to the agent and returns the response."""
+    def chat(self, prompt: str, callbacks=None):
+        """Sends a message to the agent and returns the response.
+        
+        Args:
+            prompt: The user's question/prompt
+            callbacks: Optional list of LangChain callbacks for streaming output
+            
+        Returns:
+            tuple: (response_text, intermediate_steps) if callbacks provided, else just response_text
+        """
         try:
-            response = self.agent.invoke({"input": prompt})
-            return response['output']
+            config = {"callbacks": callbacks} if callbacks else {}
+            response = self.agent.invoke({"input": prompt}, config=config)
+            
+            # Return both output and intermediate steps if available
+            if isinstance(response, dict):
+                output = response.get('output', str(response))
+                intermediate_steps = response.get('intermediate_steps', [])
+                return output if not callbacks else (output, intermediate_steps)
+            return str(response)
         except Exception as e:
             return f"Error: {e}"
 

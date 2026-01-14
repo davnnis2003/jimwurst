@@ -123,13 +123,56 @@ if next_prompt:
 
     # Generate Response
     with st.chat_message("assistant", avatar="🌭"):
-        with st.spinner("Thinking..."):
-            # Ensure agent model matches sidebar
-            if st.session_state.agent.model_name != model_name:
-                 st.session_state.agent = JimwurstAgent(model_name=model_name)
-            
-            response = st.session_state.agent.chat(next_prompt)
-            st.markdown(response)
+        # Create a container for streaming thoughts
+        thinking_container = st.container()
+        response_container = st.empty()
+        
+        with thinking_container:
+            with st.expander("🧠 Agent Thinking Process", expanded=True):
+                thoughts_placeholder = st.empty()
+                
+                # We'll capture the verbose output by modifying the agent's chat method
+                # For now, let's show a status
+                thoughts_text = "**Starting agent...**\n\n"
+                thoughts_placeholder.markdown(thoughts_text)
+                
+                # Ensure agent model matches sidebar
+                if st.session_state.agent.model_name != model_name:
+                     st.session_state.agent = JimwurstAgent(model_name=model_name)
+                
+                try:
+                    # Call the agent - capture both stdout and stderr
+                    import io
+                    import contextlib
+                    
+                    # Capture stdout and stderr
+                    stdout_capture = io.StringIO()
+                    stderr_capture = io.StringIO()
+                    
+                    with contextlib.redirect_stdout(stdout_capture), contextlib.redirect_stderr(stderr_capture):
+                        response = st.session_state.agent.chat(next_prompt)
+                    
+                    # Get captured output
+                    captured_stdout = stdout_capture.getvalue()
+                    captured_stderr = stderr_capture.getvalue()
+                    
+                    # Combine outputs
+                    captured_output = captured_stdout + captured_stderr
+                    
+                    if captured_output.strip():
+                        thoughts_text += f"```\n{captured_output}\n```"
+                    else:
+                        thoughts_text += "*No verbose output captured - check console logs*\n"
+                    
+                    thoughts_placeholder.markdown(thoughts_text)
+                    
+                except Exception as e:
+                    response = f"Error: {str(e)}"
+                    thoughts_text += f"\n\n**Error occurred:** {str(e)}"
+                    thoughts_placeholder.markdown(thoughts_text)
+        
+        response_container.markdown(f"**Answer:**\n\n{response}")
     
     # Add assistant message to state
     st.session_state.messages.append({"role": "assistant", "content": response})
+
