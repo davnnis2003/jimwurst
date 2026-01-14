@@ -1,0 +1,66 @@
+
+import streamlit as st
+import os
+import sys
+
+# Add project root to sys.path to allow imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# frontend -> ollama_agent -> data_activation -> apps -> root (4 levels up)
+project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+from apps.data_activation.ollama_agent.backend.agent import JimwurstAgent
+
+st.set_page_config(
+    page_title="Jimwurst AI",
+    page_icon="🌭",
+    layout="wide"
+)
+
+st.title("🌭 Jimwurst AI")
+
+# Sidebar
+with st.sidebar:
+    st.header("Settings")
+    model_name = st.text_input("Ollama Model", value="qwen2.5:3b")
+    st.markdown("Ensure **Ollama** is running locally.")
+    if st.button("Check Connection"):
+        # Temporary agent to check connection
+        temp_agent = JimwurstAgent(model_name=model_name)
+        if temp_agent.check_ollama_connection():
+            st.success("Connected to Ollama!")
+        else:
+            st.error("Could not connect to Ollama.")
+
+# Initialize Session State
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+if "agent" not in st.session_state:
+    st.session_state.agent = JimwurstAgent(model_name=model_name)
+
+# Display Chat History
+for message in st.session_state.messages:
+    with st.chat_message(message["role"], avatar="🌭" if message["role"] == "assistant" else "👤"):
+        st.markdown(message["content"])
+
+# User Input
+if prompt := st.chat_input("How can I help you today?"):
+    # Add user message to state
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(prompt)
+
+    # Generate Response
+    with st.chat_message("assistant", avatar="🌭"):
+        with st.spinner("Thinking..."):
+            # Ensure agent model matches sidebar
+            if st.session_state.agent.model_name != model_name:
+                 st.session_state.agent = JimwurstAgent(model_name=model_name)
+            
+            response = st.session_state.agent.chat(prompt)
+            st.markdown(response)
+    
+    # Add assistant message to state
+    st.session_state.messages.append({"role": "assistant", "content": response})

@@ -26,16 +26,20 @@ The pholosophy behind can be found in [Data Biz](https://jimmypang.substack.com/
 
 ## Usage
 
-You can interact with the agent in two modes:
+You can interact with the agent in **GUI Mode** (Recommended) or **CLI Mode**.
 
-**Interactive Mode:**
+**GUI Mode:**
 ```bash
-python apps/data_activation/ollama_agent/agent.py --interactive
+uv run streamlit run apps/data_activation/ollama_agent/frontend/app.py
 ```
+This launches a web interface at `http://localhost:8501`.
 
-**Single Prompt Mode:**
+**CLI Mode:**
 ```bash
-python apps/data_activation/ollama_agent/agent.py --prompt "Ingest data from /Users/jimmypang/mydata.csv"
+# Interactive
+uv run python apps/data_activation/ollama_agent/backend/agent.py --interactive
+# Single Prompt
+uv run python apps/data_activation/ollama_agent/backend/agent.py --prompt "Ingest data from /path/to/data.csv"
 ```
 
 ## Capabilities
