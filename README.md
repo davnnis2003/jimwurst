@@ -8,6 +8,13 @@ It is a German expression meaning that "It doesn't matter to me", literally tran
 
 Casual in attitude, serious about DWH architecture. 
 
+# Table of Contents
+- [Tenet](#tenet)
+- [Getting Started](#getting-started)
+- [Python Environment Setup](#python-environment-setup)
+- [Abstraction & Toolings](#abstraction--toolings)
+- [Folder Structure](#-folder-structure)
+
 # Tenet
 This is a monolithic repository of a DWH for personal data analytics and AI. Everything in this repo is expected to be **100% running locally**.
 
@@ -15,17 +22,24 @@ A very core idea here is **tools agnostic**. Any tooling in modern data stack wi
 
 The pholosophy behind can be found in [Data Biz](https://jimmypang.substack.com/s/engineering-value-at-scale).
 
-# 🧠 AI Agent (New!)
+# Getting Started
 
-`jimwurst` now features an AI-powered interaction layer powered by [Ollama](https://ollama.com/) and [LangChain](https://www.langchain.com/).
+## 1. Launch the Stack
+To get the local stack running (Postgres), simply run:
 
-## Prerequisites
+```bash
+make up
+```
+This will create the necessary `.env` file and spin up the Docker containers.
+
+## 2. AI Agent Interaction
+`jimwurst` features an AI-powered interaction layer powered by [Ollama](https://ollama.com/) and [LangChain](https://www.langchain.com/).
+
+### Setup
 1.  Install [Ollama](https://ollama.com/download).
 2.  Pull the model: `ollama pull qwen2.5:3b`.
-3.  Ensure your local Postgres stack is running (`make up`).
 
-## Usage
-
+### Usage
 You can interact with the agent in **GUI Mode** (Recommended) or **CLI Mode**.
 
 **GUI Mode:**
@@ -38,14 +52,15 @@ This launches a web interface at `http://localhost:8501`.
 ```bash
 # Interactive
 uv run python apps/data_activation/ollama_agent/backend/agent.py --interactive
-# Single Prompt
-uv run python apps/data_activation/ollama_agent/backend/agent.py --prompt "Ingest data from /path/to/data.csv"
 ```
 
-## Capabilities
-*   **Ingest Data**: "Ingest file /path/to/file.csv"
-*   **Transform Data**: "Run transformations"
-*   **Ask Questions**: "How many users are in the users table?"
+## 3. Connectivity & Schemas
+You can connect to the local PostgreSQL instance with:
+* **Host**: `localhost` | **Port**: `5432` | **User/Pass**: `jimwurst_user`/`jimwurst_password`
+
+The following schemas are initialized by default:
+* `marts`, `intermediate`, `staging`, and `s_<app_name>` (ODS).
+
 
 # Python Environment Setup
 
@@ -85,29 +100,6 @@ uv pip freeze > requirements.txt
 uv pip sync requirements.txt
 ```
 
-# Getting Started
-To get the local stack running (Postgres), simply run:
-
-```bash
-make up
-```
-This will create the necessary `.env` file and spin up the Docker containers.
-
-## Connectivity
-You can connect to the local PostgreSQL instance with the following details:
-* **Host**: `localhost`
-* **Port**: `5432`
-* **User**: `jimwurst_user` (default)
-* **Password**: `jimwurst_password` (default)
-* **Database**: `jimwurst_db` (default)
-
-## Database Schemas
-The following schemas are initialized by default:
-* `marts`: Modeled data ready for consumption.
-* `intermediate`: Intermediate data transformations.
-* `staging`: Raw data staging area.
-* `s_<app_name>`: Operational Data Store (ODS) schemas (e.g. `s_google_sheet`).
-
 # Abstraction & Toolings
 
 ## Data Ops
@@ -130,7 +122,7 @@ For larger-scale data operations, the following tools can be integrated:
 * Job Orchestration: [Apache Airflow](https://github.com/apache/airflow)
 * Data Ingestion: [Airbyte](https://github.com/airbytehq/airbyte)
 
-## 🏗 Folder Structure
+# 🏗 Folder Structure
 Each application follows a strict modular structure using `snake_case`. Tooling is materialized through structure:
 
 ```text
