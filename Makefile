@@ -1,6 +1,6 @@
 .PHONY: up
 
-up: .init-dirs
+up: .init-dirs .check-ollama
 	@echo "Checking if Docker is running..."
 	@if ! docker info > /dev/null 2>&1; then \
 		echo "Docker is not running. Starting Docker Desktop..."; \
@@ -11,6 +11,26 @@ up: .init-dirs
 	fi
 	@echo "Starting up services..."
 	docker-compose -f docker/docker-compose.yml up -d
+	@$(MAKE) .pull-model
+	@$(MAKE) .streamlit-up
+
+.PHONY: .check-ollama
+.check-ollama:
+	@echo "Checking for Ollama..."
+	@if ! command -v ollama >/dev/null 2>&1; then \
+		echo "Error: Ollama is not installed. Please install it from https://ollama.com/download"; \
+		exit 1; \
+	fi
+
+.PHONY: .pull-model
+.pull-model:
+	@echo "Pulling Ollama model qwen2.5:3b..."
+	@ollama pull qwen2.5:3b
+
+.PHONY: .streamlit-up
+.streamlit-up:
+	@echo "Starting Streamlit AI Agent..."
+	@uv run streamlit run apps/data_activation/ollama_agent/frontend/app.py
 
 .PHONY: .init-dirs
 .init-dirs:

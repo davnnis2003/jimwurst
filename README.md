@@ -24,35 +24,21 @@ The pholosophy behind can be found in [Data Biz](https://jimmypang.substack.com/
 
 # Getting Started
 
-## 1. Launch the Stack
-To get the local stack running (Postgres), simply run:
+## 1. Prerequisites
+*   [Docker](https://www.docker.com/) must be installed and running.
+*   [Ollama](https://ollama.com/download) must be installed.
+
+## 2. Launch Everything
+Run the following command to spin up the database, pull the AI model, and launch the AI Agent interface:
 
 ```bash
 make up
 ```
-This will create the necessary `.env` file and spin up the Docker containers.
 
-## 2. AI Agent Interaction
-`jimwurst` features an AI-powered interaction layer powered by [Ollama](https://ollama.com/) and [LangChain](https://www.langchain.com/).
-
-### Setup
-1.  Install [Ollama](https://ollama.com/download).
-2.  Pull the model: `ollama pull qwen2.5:3b`.
-
-### Usage
-You can interact with the agent in **GUI Mode** (Recommended) or **CLI Mode**.
-
-**GUI Mode:**
-```bash
-uv run streamlit run apps/data_activation/ollama_agent/frontend/app.py
-```
-This launches a web interface at `http://localhost:8501`.
-
-**CLI Mode:**
-```bash
-# Interactive
-uv run python apps/data_activation/ollama_agent/backend/agent.py --interactive
-```
+This will:
+1.  Start Postgres (Docker).
+2.  Pull the required LLM (`qwen2.5:3b`).
+3.  Launch the Streamlit web interface at `http://localhost:8501`.
 
 ## 3. Connectivity & Schemas
 You can connect to the local PostgreSQL instance with:
