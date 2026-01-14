@@ -62,60 +62,163 @@ class JimwurstAgent:
             pass
         return False
 
-    def _get_sql_agent(self):
+    def _get_sql_agent(self, db):
         """Creates an SQL agent for querying the database."""
+        # Custom error handler for parsing errors
+        def handle_parsing_error(error) -> str:
+            error_str = str(error)
+            if "SELECT" in error_str or "Action:" in error_str:
+                return f"I had a parsing error. I will try to be more concise. Error: {error_str[:50]}"
+            return f"I encountered an issue. Let me try a simpler approach. Error: {error_str[:100]}"
+        
+        # Helper to clean SQL from the agent
+        def clean_sql(query: str) -> str:
+            query = query.strip()
+            # Remove markdown code blocks if present
+            if "```" in query:
+                import re
+                match = re.search(r"```(?:sql)?\s*(.*?)\s*```", query, re.DOTALL | re.IGNORECASE)
+                if match:
+                    query = match.group(1)
+                else:
+                    query = query.replace("```sql", "").replace("```", "")
+            
+            # Remove leading "sql" if the model adds it outside backticks
+            if query.lower().startswith("sql"):
+                query = query[3:].strip()
+                
+            return query.strip("` \n\t;")
+
+        # Custom prefix to teach the agent about the data warehouse schema structure
+        sql_prefix = """You are an agent designed to interact with a SQL database.
+All relevant schemas (marts, s_*) are in your search path.
+
+CRITICAL SCHEMA PRIORITIES:
+1. MART SYSTEM: Use the `marts` schema for all analytical questions and insights. This is your primary source of truth.
+2. INGESTION SYSTEM: Use the `s_` schemas (e.g., s_substack, s_linkedin) only when debugging if raw data has been successfully ingested.
+3. IGNORE: Do NOT use or refer to the `staging` or `intermediate` schemas. They are internal layers that do not matter for user insights.
+
+CRITICAL RULES:
+1. NEVER include markdown backticks (```) or the word "sql" in your tool inputs. Only provide raw SQL.
+2. PUBLIC SCHEMA IS EMPTY. Do NOT query `information_schema` filtering for `table_schema = 'public'`.
+
+WORKFLOW:
+1. Use `sql_db_list_tables` to see available tables (mainly in `marts` or `s_*`).
+2. Identify relevant tables in `marts` for insights.
+3. Use `sql_db_schema` to understand columns.
+4. Execute query and return natural language RESULTS.
+"""
+
+        # Custom Toolkit with cleaned query tool
+        from langchain_community.agent_toolkits import SQLDatabaseToolkit
+        from langchain.tools import Tool as LangChainTool
+        
+        toolkit = SQLDatabaseToolkit(db=db, llm=self.llm)
+        original_tools = toolkit.get_tools()
+        cleaned_tools = []
+        
+        for t in original_tools:
+            if t.name == "sql_db_query":
+                # Create a wrapper that cleans the SQL before calling the original tool
+                def wrapped_query(query: str, tool=t):
+                    cleaned = clean_sql(query)
+                    return tool.run(cleaned)
+                
+                # Create a new Tool with the same metadata but our wrapped function
+                new_tool = LangChainTool(
+                    name=t.name,
+                    description=t.description,
+                    func=wrapped_query
+                )
+                cleaned_tools.append(new_tool)
+            else:
+                cleaned_tools.append(t)
+
+        return create_sql_agent(
+            llm=self.llm,
+            toolkit=None,  # Pass tools directly
+            tools=cleaned_tools,
+            db=db,
+            verbose=True,
+            agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+            handle_parsing_errors=handle_parsing_error,
+            prefix=sql_prefix,
+            max_iterations=10,
+            max_execution_time=60,
+        )
+
+    def _setup_agent(self):
         from utils.ingestion_utils import load_env
         load_env()
         
         DB_HOST = os.getenv("DB_HOST", "localhost")
-        DB_NAME = os.getenv("POSTGRES_DB", "jimwurst_db")
-        DB_USER = os.getenv("POSTGRES_USER", "jimwurst_user")
-        DB_PASS = os.getenv("POSTGRES_PASSWORD", "jimwurst_password")
+        DB_NAME = os.getenv("POSTGRES_DB", "jimwurst")
+        DB_USER = os.getenv("POSTGRES_USER", "jimwurst")
+        DB_PASS = os.getenv("POSTGRES_PASSWORD", "jimwurst")
         DB_PORT = os.getenv("DB_PORT", "5432")
         
-        db_uri = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-        db = SQLDatabase.from_uri(db_uri)
+        # Define the schemas we want to include in our search path (Focusing only on what matters)
+        schemas = "public,marts,s_spotify,s_linkedin,s_substack,s_telegram,s_bolt,s_apple_health,s_google_sheet"
         
-        return create_sql_agent(
-            llm=self.llm,
-            toolkit=None,
-            db=db,
-            verbose=True,
-            agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-        )
+        # Update URI to include search_path
+        db_uri = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}?options=-csearch_path%3D{schemas}"
+        db = SQLDatabase.from_uri(db_uri)
 
-    def _setup_agent(self):
+        sql_agent_executor = self._get_sql_agent(db)
+
+        @tool
+        def query_database_tool(query_description: str):
+            """Useful for when you need to answer questions about data in the Data Warehouse. 
+            Input should be a natural language question about the data."""
+            try:
+                result = sql_agent_executor.invoke({"input": query_description})
+                if isinstance(result, dict):
+                    return result.get("output", str(result))
+                return str(result)
+            except Exception as e:
+                return f"Error querying database: {str(e)}"
+
         tools = [
             ingest_data_tool,
-            run_transformations_tool
+            run_transformations_tool,
+            query_database_tool
         ]
-        
-        sql_agent_executor = self._get_sql_agent()
-        
-        @tool
-        def query_database_tool(query: str):
-            """
-            Useful for when you need to answer questions about data in the database. 
-            Input should be a natural language question.
-            The tool will convert it to SQL, execute it, and return the answer.
-            """
-            return sql_agent_executor.invoke({"input": query})
 
-        tools.append(query_database_tool)
+        # Custom error handler for the main agent
+        def handle_main_agent_error(error) -> str:
+            return f"I had trouble processing that. Let me try again with a simpler approach."
 
         return initialize_agent(
             tools, 
             self.llm, 
             agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, 
             verbose=True,
-            handle_parsing_errors=True
+            handle_parsing_errors=handle_main_agent_error,
+            max_iterations=10,
+            max_execution_time=120,
         )
 
-    def chat(self, prompt: str) -> str:
-        """Sends a message to the agent and returns the response."""
+
+    def chat(self, prompt: str, callbacks=None):
+        """Sends a message to the agent and returns the response.
+        
+        Args:
+            prompt: The user's question/prompt
+            callbacks: Optional list of LangChain callbacks for streaming output
+            
+        Returns:
+            tuple: (response_text, intermediate_steps) if callbacks provided, else just response_text
+        """
         try:
-            response = self.agent.invoke({"input": prompt})
-            return response['output']
+            config = {"callbacks": callbacks} if callbacks else {}
+            response = self.agent.invoke({"input": prompt}, config=config)
+            
+            # Return both output and intermediate steps if available
+            if isinstance(response, dict):
+                output = response.get('output', str(response))
+                intermediate_steps = response.get('intermediate_steps', [])
+                return output if not callbacks else (output, intermediate_steps)
+            return str(response)
         except Exception as e:
             return f"Error: {e}"
 

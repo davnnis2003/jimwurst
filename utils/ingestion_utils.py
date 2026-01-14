@@ -11,7 +11,7 @@ from psycopg2 import sql
 
 def load_env():
     """Load environment variables from docker/.env files."""
-    ENV_DIR = os.path.join(os.path.dirname(__file__), '../../docker')
+    ENV_DIR = os.path.join(os.path.dirname(__file__), '../docker')
     ENV_EXAMPLE = os.path.join(ENV_DIR, '.env.example')
     ENV_REAL = os.path.join(ENV_DIR, '.env')
 
