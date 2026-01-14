@@ -47,6 +47,17 @@ Each application follows a strict modular structure using `snake_case`. Tooling 
 - **Convention**: Data should NEVER be left in the `public` schema. All models and seeds must be explicitly mapped to `staging`, `intermediate`, or `marts`.
 - **Seed Naming**: Seeds that serve as dimensions should be prefixed with `dim_` (e.g., `dim_public_holidays.csv`).
 
+### Data Categorization
+When users ask about available data or to check what's there, you must distinguish between:
+1. **Raw Data**: Found in `s_` schemas (e.g., `s_spotify`, `s_linkedin`). These are direct outputs from the ingestion system.
+2. **Curated Data**: Found in the `marts` schema. These models are ready for insight generation, analysis, and business reporting.
+
+**Action**: When listing tables, clearly label them as "Raw" or "Curated". For **Raw Data**, you must explicitly identify the source application (e.g., "This table is from LinkedIn") by mapping the `s_<source>` schema name to the human-readable application name. Explain that Curated data is preferred for generating insights.
+
+### Response Guidelines
+- **Executive Summary & Bullets**: All answers generated for the user must start with a high-level **Executive Summary** followed by structured **Bullet Points** for details.
+- **Hallucination Prevention**: If a schema (especially `marts`) is empty or contains no relevant data for a query, explicitly state that no data is available. **NEVER make up hypothetical results or insights.** High accuracy is better than a fabricated answer.
+
 ## 💡 Architectural Principles
 1. **Tools Agnostic**: Logic should be separated from specific tools. If we swap Airbyte for something else, the `data-ingestion` logic should remain clear.
 2. **Open Source First**: Prioritize open-source tooling.
