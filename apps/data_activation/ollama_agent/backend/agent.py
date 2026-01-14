@@ -105,8 +105,10 @@ CRITICAL SCHEMA PRIORITIES:
 CRITICAL RULES:
 1. When asked "what data is there" or to "check data", you MUST list tables from both `marts` and `s_` schemas. 
 2. Explicitly label tables as "Raw Data" (if in `s_` schema) or "Curated/Ready for Insights" (if in `marts` schema).
-3. NEVER include markdown backticks (```) or the word "sql" in your tool inputs. Only provide raw SQL.
-4. PUBLIC SCHEMA IS EMPTY. Do NOT query `information_schema` filtering for `table_schema = 'public'`.
+3. HALLUCINATION PREVENTION: If a schema (e.g., `marts`) is empty or `sql_db_list_tables` returns nothing, state clearly that no data is available. DO NOT invent information.
+4. RESPONSE FORMAT: Always provide a concise **Executive Summary** followed by **Bullet Points**.
+5. NEVER include markdown backticks (```) or the word "sql" in your tool inputs. Only provide raw SQL.
+6. PUBLIC SCHEMA IS EMPTY. Do NOT query `information_schema` filtering for `table_schema = 'public'`.
 
 WORKFLOW:
 1. Use `sql_db_list_tables` to see available tables.

@@ -54,6 +54,10 @@ When users ask about available data or to check what's there, you must distingui
 
 **Action**: When listing tables, clearly label them as "Raw" or "Curated" and explain that Curated data is preferred for generating insights.
 
+### Response Guidelines
+- **Executive Summary & Bullets**: All answers generated for the user must start with a high-level **Executive Summary** followed by structured **Bullet Points** for details.
+- **Hallucination Prevention**: If a schema (especially `marts`) is empty or contains no relevant data for a query, explicitly state that no data is available. **NEVER make up hypothetical results or insights.** High accuracy is better than a fabricated answer.
+
 ## 💡 Architectural Principles
 1. **Tools Agnostic**: Logic should be separated from specific tools. If we swap Airbyte for something else, the `data-ingestion` logic should remain clear.
 2. **Open Source First**: Prioritize open-source tooling.
