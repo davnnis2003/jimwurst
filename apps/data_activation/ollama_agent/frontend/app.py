@@ -1,6 +1,9 @@
 
 import streamlit as st
 import os
+import tempfile
+import shutil
+
 import sys
 import subprocess
 import signal
@@ -47,6 +50,8 @@ with st.sidebar:
             except Exception as e:
                 st.error(f"Error during shutdown: {e}")
 
+
+
 # Initialize Session State
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -59,12 +64,55 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"], avatar="🌭" if message["role"] == "assistant" else "👤"):
         st.markdown(message["content"])
 
-# User Input
-if prompt := st.chat_input("How can I help you today?"):
+# --- New Feature: Showcase & Upload ---
+
+# Variable to hold the user's next action/prompt
+next_prompt = None
+
+with st.container():
+    # 1. Feature Showcase Bubbles
+    st.caption("What would you like to do?")
+    col1, col2, col3 = st.columns(3)
+    
+    if col1.button("📂 Upload CSV Files", use_container_width=True):
+        # We can't auto-open the uploader, but we can set a prompt to guide or just rely on the uploader below
+        # For now, let's treat this as a prompt query or a guide
+        next_prompt = "I would like to upload a CSV file."
+        
+    if col2.button("🔄 Store & Transform", use_container_width=True):
+        next_prompt = "Store and transform the data in the DWH."
+        
+    if col3.button("📊 Provide Insights", use_container_width=True):
+        next_prompt = "Provide insights from the existing data."
+
+    # 2. CSV Upload Widget
+    with st.expander("Upload a CSV File", expanded=False):
+        uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+        if uploaded_file is not None:
+            if st.button("Process Uploaded File"):
+                # Save to a temporary file
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp_file:
+                    tmp_file.write(uploaded_file.getvalue())
+                    tmp_path = tmp_file.name
+                
+                # Construct a prompt for the agent to ingest this specific file
+                next_prompt = f"Please ingest the data from this file: {tmp_path}"
+                st.success(f"File uploaded to {tmp_path}. Sending to agent...")
+
+# User Input (Standard Chat)
+chat_input_prompt = st.chat_input("How can I help you today?")
+
+# Determine final prompt source
+if chat_input_prompt:
+    next_prompt = chat_input_prompt
+
+# Process the prompt if one exists (either from buttons, upload, or chat input)
+if next_prompt:
     # Add user message to state
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.messages.append({"role": "user", "content": next_prompt})
     with st.chat_message("user", avatar="👤"):
-        st.markdown(prompt)
+        st.markdown(next_prompt)
+
 
     # Generate Response
     with st.chat_message("assistant", avatar="🌭"):
@@ -73,7 +121,7 @@ if prompt := st.chat_input("How can I help you today?"):
             if st.session_state.agent.model_name != model_name:
                  st.session_state.agent = JimwurstAgent(model_name=model_name)
             
-            response = st.session_state.agent.chat(prompt)
+            response = st.session_state.agent.chat(next_prompt)
             st.markdown(response)
     
     # Add assistant message to state
