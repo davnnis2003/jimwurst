@@ -34,7 +34,7 @@ def ingest_data_tool(file_path: str):
     """
     Ingests a CSV or Excel file into the database.
     Input MUST be ONLY the full absolute path to the file as stored on the server,
-    typically under ~/.jimwurst_data/<filename> when uploaded via the app.
+    typically under ~/<user_name>/.jimwurst_data/<filename> when uploaded via the app.
 
     CRITICAL:
     - Do NOT append any extra text such as encoding notes or explanations.
