@@ -348,6 +348,55 @@ def scan_for_files():
     return files_to_process
 
 
+def ingest_uploaded_linkedin_file(file_path: str, mode: str = "basic") -> str:
+    """
+    Ingest a single LinkedIn file that was uploaded via the Jimwurst UI.
+
+    - `file_path` should be the absolute path to the uploaded file (e.g. under ~/.jimwurst_data).
+    - `mode` should be either "basic" (Excel creator insights) or "complete" (CSV archive).
+    """
+    try:
+        if not os.path.exists(file_path):
+            return f"Error: Uploaded LinkedIn file not found at {file_path}"
+
+        conn = get_db_connection()
+        ensure_schema(conn, SCHEMA_NAME)
+
+        filename = os.path.basename(file_path)
+        table_name = f"{mode}_uploaded_{sanitize_table_name(filename)}"
+        ext = os.path.splitext(file_path)[1].lower()
+
+        if mode == "basic" and ext in [".xlsx", ".xls"]:
+            ingestor = ExcelIngestor(conn)
+            ingestor.ingest(file_path, table_name)
+            conn.close()
+            return (
+                f"Successfully ingested LinkedIn basic (Excel) export '{filename}' "
+                f"into schema '{SCHEMA_NAME}' as base table '{table_name}'."
+            )
+        elif mode == "complete" and ext == ".csv":
+            ingestor = CSVIngestor(conn)
+            ingestor.ingest(file_path, table_name)
+            conn.close()
+            return (
+                f"Successfully ingested LinkedIn complete (CSV) export '{filename}' "
+                f"into schema '{SCHEMA_NAME}' as table '{table_name}'."
+            )
+        else:
+            conn.close()
+            return (
+                f"Error: Unsupported LinkedIn file type '{ext}' for mode '{mode}'. "
+                f"Expected .xlsx/.xls for basic or .csv for complete."
+            )
+
+    except Exception as e:
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return f"Error ingesting uploaded LinkedIn file '{file_path}': {e}"
+
+
 def main():
     print(f"LinkedIn Data Ingestion")
     print(f"=" * 50)
