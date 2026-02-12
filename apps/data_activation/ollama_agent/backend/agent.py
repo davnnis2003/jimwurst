@@ -58,6 +58,28 @@ def ingest_data_tool(file_path: str):
         except Exception:
             # If anything goes wrong, keep the original string so we fail loudly instead of silently truncating.
             cleaned = original
+
+    # Normalize any accidental /jimwurst_data/ paths to the canonical ~/.jimwurst_data location
+    try:
+        import os as _os
+        home = _os.path.expanduser("~")
+        canonical_dir = _os.path.join(home, ".jimwurst_data")
+
+        # Case 1: model invented something like "/Users/jimwurst_data/<file>"
+        marker = "/jimwurst_data/"
+        if marker in cleaned and ".jimwurst_data" not in cleaned:
+            after = cleaned.split(marker, 1)[1]
+            cleaned = _os.path.join(canonical_dir, after)
+
+        # Case 2: model used "~/jimwurst_data" instead of "~/.jimwurst_data"
+        tilde_marker = "~/jimwurst_data/"
+        if cleaned.startswith(tilde_marker):
+            after = cleaned[len(tilde_marker):]
+            cleaned = _os.path.join(canonical_dir, after)
+    except Exception:
+        # If normalization fails for any reason, fall back to the cleaned string as-is.
+        pass
+
     return ingest_file(cleaned)
 
 @tool
