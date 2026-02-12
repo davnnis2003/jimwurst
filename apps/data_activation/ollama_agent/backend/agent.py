@@ -32,10 +32,33 @@ except ImportError:
 @tool
 def ingest_data_tool(file_path: str):
     """
-    Ingests a CSV file into the database. 
-    Input should be the full absolute path to the CSV file.
+    Ingests a CSV or Excel file into the database.
+    Input MUST be ONLY the full absolute path to the file as stored on the server,
+    typically under ~/.jimwurst_data/<filename> when uploaded via the app.
+
+    CRITICAL:
+    - Do NOT append any extra text such as encoding notes or explanations.
+    - Do NOT wrap the path in quotes or backticks.
+    - If you want to mention encoding, do so in natural language outside the tool input.
     """
-    return ingest_file(file_path)
+    # Defensive cleaning in case the model adds extra text
+    cleaned = file_path.strip()
+    # Strip common accidental wrappers, but only if they match
+    if cleaned and cleaned[0] in ("`", '"', "'") and cleaned[-1] == cleaned[0]:
+        cleaned = cleaned[1:-1].strip()
+    # If the model appended notes like " (using 'utf-8' encoding)", try a safe fallback:
+    # only strip that suffix if the original path does NOT exist but the trimmed one DOES.
+    if " (using" in cleaned:
+        original = cleaned
+        candidate = cleaned.split(" (using", 1)[0].strip()
+        try:
+            from os import path as _path
+            if not _path.exists(original) and _path.exists(candidate):
+                cleaned = candidate
+        except Exception:
+            # If anything goes wrong, keep the original string so we fail loudly instead of silently truncating.
+            cleaned = original
+    return ingest_file(cleaned)
 
 @tool
 def run_transformations_tool(command: str = "build"):
@@ -101,6 +124,12 @@ CRITICAL SCHEMA PRIORITIES:
 1. MART SYSTEM: Use the `marts` schema for all analytical questions and insights. This is your primary source of truth.
 2. INGESTION SYSTEM: Use the `s_` schemas only when asked for "raw data" or when debugging ingestion.
 3. IGNORE: Do NOT use or refer to the `staging` or `intermediate` schemas.
+
+FILE INGESTION MODEL:
+1. Uploaded files from the UI are stored on disk under the user's home directory in a dedicated folder: `~/.jimwurst_data/<filename>`.
+2. The ingestion tool (`ingest_data_tool`) expects absolute file paths that point to this folder (or other server-accessible locations), NOT arbitrary client-side paths like `~/Downloads/...`.
+3. If the user mentions a file path in `Downloads` or any non-`~/.jimwurst_data` location, DO NOT try to verify the file's existence. Instead, explain that files must be uploaded via the app so they are stored in `~/.jimwurst_data`, and then ingested from there.
+4. Do NOT infer, assume, or check file existence from the database schemas; ingestion writes raw data into `s_` schemas, while table presence is independent from the original filesystem path.
 
 CRITICAL RULES:
 1. When asked "what data is there" or to "check data", you MUST list tables from both `marts` and `s_` schemas. 
