@@ -40,6 +40,8 @@ def ingest_data_tool(file_path: str):
     - Do NOT append any extra text such as encoding notes or explanations.
     - Do NOT wrap the path in quotes or backticks.
     - If you want to mention encoding, do so in natural language outside the tool input.
+    - If the ingestion result starts with 'Error' or 'Error during ingestion', you MUST stop
+      and return that error message to the user instead of calling any other tools.
     """
     # Defensive cleaning in case the model adds extra text
     cleaned = file_path.strip()
@@ -241,8 +243,15 @@ WORKFLOW:
 
         @tool
         def query_database_tool(query_description: str):
-            """Useful for when you need to answer questions about data in the Data Warehouse. 
-            Input should be a natural language question about the data."""
+            """Useful for when you need to answer questions about data in the Data Warehouse.
+            Input should be a natural language question about the data.
+
+            IMPORTANT:
+            - Do NOT call this tool to 'confirm ingestion' immediately after ingest_data_tool
+              returned an error (messages starting with 'Error' or 'Error during ingestion').
+              In that case, simply surface the ingestion error to the user instead of querying
+              the database.
+            """
             try:
                 result = sql_agent_executor.invoke({"input": query_description})
                 if isinstance(result, dict):
