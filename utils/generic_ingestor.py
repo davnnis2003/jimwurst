@@ -6,8 +6,8 @@ from utils.ingestion_utils import get_db_connection, ensure_schema, sanitize_tab
 
 def ingest_file(file_path: str, schema: str = 'staging') -> str:
     """
-    Ingests a CSV file into the PostgreSQL database.
-    Infers schema from the CSV file.
+    Ingests a flat file (CSV or Excel) into the PostgreSQL database.
+    Infers schema from the file contents.
     """
     if not os.path.exists(file_path):
         return f"Error: File {file_path} not found."
@@ -27,8 +27,14 @@ def ingest_file(file_path: str, schema: str = 'staging') -> str:
         db_string = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
         engine = create_engine(db_string)
 
-        # Read CSV
-        df = pd.read_csv(file_path)
+        # Read file based on extension
+        _, ext = os.path.splitext(file_path.lower())
+        if ext == ".csv":
+            df = pd.read_csv(file_path)
+        elif ext in [".xlsx", ".xls"]:
+            df = pd.read_excel(file_path)
+        else:
+            return f"Error: Unsupported file type '{ext}'. Please provide a CSV or Excel (.xlsx, .xls) file."
         
         # Sanitize columns
         df.columns = [clean_header(c) for c in df.columns]
