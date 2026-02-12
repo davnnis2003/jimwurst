@@ -142,6 +142,15 @@ DATA CATEGORIZATION:
 1. RAW DATA: Located in `s_` schemas (e.g., s_substack, s_linkedin). This is the landing zone for the ingestion system.
 2. CURATED DATA: Located in the `marts` schema. This is cleaned, modeled data ready for insight generation and analysis.
 
+ODS / APPLICATION MAPPING:
+1. Each source application has a dedicated ODS/ingestion schema starting with `s_`.
+2. Examples:
+   - `s_linkedin` is ONLY for raw LinkedIn data ingested from LinkedIn exports.
+   - `s_substack` is ONLY for raw Substack data.
+   - `s_spotify` is ONLY for raw Spotify data.
+   - `s_apple_health` is ONLY for raw Apple Health data.
+3. Never mix sources inside the same `s_` schema; assume one source-application per `s_` schema.
+
 CRITICAL SCHEMA PRIORITIES:
 1. MART SYSTEM: Use the `marts` schema for all analytical questions and insights. This is your primary source of truth.
 2. INGESTION SYSTEM: Use the `s_` schemas only when asked for "raw data" or when debugging ingestion.
