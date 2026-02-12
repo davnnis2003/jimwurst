@@ -3,11 +3,18 @@
 up: .init-dirs .check-ollama
 	@echo "Checking if Docker is running..."
 	@if ! docker info > /dev/null 2>&1; then \
-		echo "Docker is not running. Starting Docker Desktop..."; \
-		open -a Docker; \
-		echo "Waiting for Docker to start..."; \
-		while ! docker info > /dev/null 2>&1; do sleep 1; done; \
-		echo "Docker started!"; \
+		echo "Docker is not running."; \
+		unameOut=$$(uname); \
+		if [ "$$unameOut" = "Darwin" ]; then \
+			echo "Starting Docker Desktop in the background..."; \
+			open -g -a Docker; \
+			echo "Waiting for Docker to start..."; \
+			while ! docker info > /dev/null 2>&1; do sleep 1; done; \
+			echo "Docker started!"; \
+		else \
+			echo "Please start Docker manually, then re-run 'make up'."; \
+			exit 1; \
+		fi; \
 	fi
 	@echo "Starting up services..."
 	docker-compose -f docker/docker-compose.yml up -d
@@ -30,6 +37,23 @@ down:
 
 .PHONY: .pull-model
 .pull-model:
+	@echo "Checking that Ollama server is running..."
+	@if ! curl -sSf http://localhost:11434 > /dev/null 2>&1; then \
+		echo "Ollama server is not reachable on http://localhost:11434"; \
+		echo "Starting 'ollama serve' in the background..."; \
+		nohup ollama serve > /dev/null 2>&1 & \
+		echo "Waiting for Ollama to start..."; \
+		retries=0; \
+		until curl -sSf http://localhost:11434 > /dev/null 2>&1 || [ $$retries -ge 30 ]; do \
+			sleep 1; \
+			retries=$$((retries + 1)); \
+		done; \
+		if ! curl -sSf http://localhost:11434 > /dev/null 2>&1; then \
+			echo "Error: Ollama server is still not reachable after starting 'ollama serve'."; \
+			echo "Please check your Ollama installation or start it manually, then re-run 'make up'."; \
+			exit 1; \
+		fi; \
+	fi
 	@echo "Pulling Ollama model qwen2.5:3b..."
 	@ollama pull qwen2.5:3b
 

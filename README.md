@@ -11,9 +11,11 @@ Casual in attitude, serious about DWH architecture.
 # Table of Contents
 - [Tenet](#tenet)
 - [Getting Started](#getting-started)
-- [Python Environment Setup](#python-environment-setup)
-- [Abstraction & Toolings](#abstraction--toolings)
-- [Folder Structure](#-folder-structure)
+- [Technical Details](#technical-details)
+  - [Connectivity & Schemas](#connectivity--schemas)
+  - [Python Environment Setup](#python-environment-setup)
+  - [Abstraction & Toolings](#abstraction--toolings)
+  - [Folder Structure](#-folder-structure)
 
 # Tenet
 This is a monolithic repository of a DWH for personal data analytics and AI. Everything in this repo is expected to be **100% running locally**.
@@ -24,12 +26,8 @@ The pholosophy behind can be found in [Data Biz](https://jimmypang.substack.com/
 
 # Getting Started
 
-## 1. Prerequisites
-*   [Docker](https://www.docker.com/) must be installed and running.
-*   [Ollama](https://ollama.com/download) must be installed.
-
-## 2. Launch Everything
-Run the following command to spin up the database, pull the AI model, and launch the AI Agent interface:
+## Launch Everything
+Run the following command to spin up the database, start Ollama (if needed), pull the AI model, and launch the AI Agent interface:
 
 ```bash
 make up
@@ -37,22 +35,17 @@ make up
 
 This will:
 1.  Start Postgres (Docker).
-2.  Pull the required LLM (`qwen2.5:3b`).
-3.  Launch the Streamlit web interface at `http://localhost:8501`.
+2.  Start the Ollama server in the background if it is not already running.
+3.  Pull the required LLM (`qwen2.5:3b`).
+4.  Launch the Streamlit web interface at `http://localhost:8501`.
 
-## 3. Connectivity & Schemas
-You can connect to the local PostgreSQL instance with:
-* **Host**: `localhost` | **Port**: `5432` | **User/Pass**: `jimwurst_user`/`jimwurst_password`
+# Technical Details
 
-The following schemas are initialized by default:
-* `marts`, `intermediate`, `staging`, and `s_<app_name>` (ODS).
-
-
-# Python Environment Setup
+## Python Environment Setup
 
 This project uses [uv](https://github.com/astral-sh/uv) for fast, reliable Python dependency management.
 
-## Installing uv
+### Installing uv
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -63,7 +56,7 @@ After installation, restart your shell or run:
 source $HOME/.local/bin/env
 ```
 
-## Managing Dependencies
+### Managing Dependencies
 
 **Create a virtual environment:**
 ```bash
@@ -86,16 +79,23 @@ uv pip freeze > requirements.txt
 uv pip sync requirements.txt
 ```
 
-# Abstraction & Toolings
+## Connectivity & Schemas
+You can connect to the local PostgreSQL instance with:
+* **Host**: `localhost` | **Port**: `5432` | **User/Pass**: `jimwurst_user`/`jimwurst_password`
 
-## Data Ops
+The following schemas are initialized by default:
+* `marts`, `intermediate`, `staging`, and `s_<app_name>` (ODS).
+
+## Abstraction & Toolings
+
+### Data Ops
 * Containerization: [Docker](https://github.com/docker/docker)
 * CI/CD: [Github Actions](https://github.com/features/actions)
 * Job Orchestration: Python / [Makefile](Makefile)
 * DWH: Postgres
 * Package Manager: [uv](https://github.com/astral-sh/uv)
 
-## Data Engineering
+### Data Engineering
 * Data Ingestion: Python / SQL
 * Data Transformation: [dbt Core](https://github.com/dbt-labs/dbt-core)
 * Data Activation:
@@ -103,12 +103,12 @@ uv pip sync requirements.txt
   * adhoc analysis: [Jupyter](https://github.com/jupyter/jupyter)
   * AI: [Ollama](https://github.com/ollama/ollama)
 
-## Scalability (Optional)
+### Scalability (Optional)
 For larger-scale data operations, the following tools can be integrated:
 * Job Orchestration: [Apache Airflow](https://github.com/apache/airflow)
 * Data Ingestion: [Airbyte](https://github.com/airbytehq/airbyte)
 
-# 🏗 Folder Structure
+## 🏗 Folder Structure
 Each application follows a strict modular structure using `snake_case`. Tooling is materialized through structure:
 
 ```text
@@ -126,5 +126,5 @@ Each application follows a strict modular structure using `snake_case`. Tooling 
 ├── docker/                  # Local orchestration (Docker Compose, .env)
 ├── docs/                    # Documentation, diagrams, and architecture RFCs
 ├── prompts/                 # AI system prompts and LLM context files
-└── utils/                   # Shared internal packages (Python utils, custom operators)
+│── utils/                   # Shared internal packages (Python utils, custom operators)
 ```
