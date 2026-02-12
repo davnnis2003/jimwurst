@@ -27,7 +27,10 @@ st.title("🌭 Jimwurst AI")
 with st.sidebar:
     st.header("Settings")
     model_name = st.text_input("Ollama Model", value="qwen2.5:3b")
-    st.markdown("Ensure **Ollama** is running locally.")
+    st.markdown(
+        "Ensure **Ollama** is running locally "
+        "(open the Ollama app or run 'ollama serve' in a terminal)."
+    )
     if st.button("Check Connection"):
         # Temporary agent to check connection
         temp_agent = JimwurstAgent(model_name=model_name)

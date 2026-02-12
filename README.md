@@ -26,12 +26,8 @@ The pholosophy behind can be found in [Data Biz](https://jimmypang.substack.com/
 
 # Getting Started
 
-## Prerequisites
-*   [Docker](https://www.docker.com/) must be installed and running.
-*   [Ollama](https://ollama.com/download) must be installed.
-
 ## Launch Everything
-Run the following command to spin up the database, pull the AI model, and launch the AI Agent interface:
+Run the following command to spin up the database, start Ollama (if needed), pull the AI model, and launch the AI Agent interface:
 
 ```bash
 make up
@@ -39,8 +35,9 @@ make up
 
 This will:
 1.  Start Postgres (Docker).
-2.  Pull the required LLM (`qwen2.5:3b`).
-3.  Launch the Streamlit web interface at `http://localhost:8501`.
+2.  Start the Ollama server in the background if it is not already running.
+3.  Pull the required LLM (`qwen2.5:3b`).
+4.  Launch the Streamlit web interface at `http://localhost:8501`.
 
 # Technical Details
 
