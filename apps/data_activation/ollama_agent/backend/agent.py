@@ -34,7 +34,7 @@ def ingest_data_tool(file_path: str):
     """
     Ingests a CSV or Excel file into the database.
     Input MUST be ONLY the full absolute path to the file as stored on the server,
-    typically under ~/<user_name>/.jimwurst_data/<filename> when uploaded via the app.
+    typically under ~/<username>/.jimwurst_data/<filename> when uploaded via the app.
 
     CRITICAL:
     - Do NOT append any extra text such as encoding notes or explanations.
@@ -76,6 +76,10 @@ def ingest_data_tool(file_path: str):
         if cleaned.startswith(tilde_marker):
             after = cleaned[len(tilde_marker):]
             cleaned = _os.path.join(canonical_dir, after)
+
+        # Final safety: ALWAYS resolve to ~/.jimwurst_data/<basename>, ignoring any other directories.
+        filename = _os.path.basename(cleaned)
+        cleaned = _os.path.join(canonical_dir, filename)
     except Exception:
         # If normalization fails for any reason, fall back to the cleaned string as-is.
         pass
