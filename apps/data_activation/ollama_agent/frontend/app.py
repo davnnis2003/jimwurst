@@ -86,75 +86,63 @@ with st.container():
     if col3.button("📊 Provide Insights", use_container_width=True):
         next_prompt = "Provide insights from the existing data."
 
-# Small attachment icon + optional drag & drop box (sits above chat input)
-if "show_file_uploader" not in st.session_state:
-    st.session_state.show_file_uploader = False
+# File upload + source selection panel (always visible above chat input)
+with st.container(border=True):
+    st.markdown("**Attach a CSV or Excel file to this chat (drag & drop or browse):**")
+    uploaded_file = st.file_uploader(
+        "Drag & drop a CSV or Excel file here or click to browse",
+        type=["csv", "xlsx", "xls"],
+        accept_multiple_files=False,
+        key="chat_file_uploader",
+    )
 
-attach_col, _ = st.columns([1, 9])
-with attach_col:
-    if st.button("📎", help="Attach data file", key="toggle_file_uploader"):
-        st.session_state.show_file_uploader = not st.session_state.show_file_uploader
+    if uploaded_file is not None:
+        # Persist the uploaded file
+        user_home = os.path.expanduser("~")
+        jimwurst_data_dir = os.path.join(user_home, ".jimwurst_data")
+        os.makedirs(jimwurst_data_dir, exist_ok=True)
 
-# Optional drag & drop area shown only after clicking the icon
-if st.session_state.show_file_uploader:
-    with st.container(border=True):
-        st.markdown("**Attach a CSV or Excel file to this chat (drag & drop or browse):**")
-        uploaded_file = st.file_uploader(
-            "Drag & drop a CSV or Excel file here or click to browse",
-            type=["csv", "xlsx", "xls"],
-            accept_multiple_files=False,
-            key="chat_file_uploader",
+        file_path = os.path.join(jimwurst_data_dir, uploaded_file.name)
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getvalue())
+
+        st.session_state.last_uploaded_file_path = file_path
+        st.session_state.last_uploaded_file_name = uploaded_file.name
+
+        st.success(f"Received file: {uploaded_file.name}")
+
+        st.markdown("**What application generated this data?**")
+        source_choice = st.radio(
+            "Choose one of the options below:",
+            [
+                "Substack (Manual Export)",
+                "Linkedin (Simple Export)",
+                "Linkedin (Full Export)",
+                "Others (Please specify)",
+            ],
+            key="data_source_choice",
         )
 
-        if uploaded_file is not None:
-            # Persist the uploaded file
-            user_home = os.path.expanduser("~")
-            jimwurst_data_dir = os.path.join(user_home, ".jimwurst_data")
-            os.makedirs(jimwurst_data_dir, exist_ok=True)
-
-            file_path = os.path.join(jimwurst_data_dir, uploaded_file.name)
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.getvalue())
-
-            st.session_state.last_uploaded_file_path = file_path
-            st.session_state.last_uploaded_file_name = uploaded_file.name
-
-            st.success(f"Received file: {uploaded_file.name}")
-
-            st.markdown("**What application generated this data?**")
-            source_choice = st.radio(
-                "Choose one of the options below:",
-                [
-                    "Substack (Manual Export)",
-                    "Linkedin (Simple Export)",
-                    "Linkedin (Full Export)",
-                    "Others (Please specify)",
-                ],
-                key="data_source_choice",
+        other_source = ""
+        if source_choice == "Others (Please specify)":
+            other_source = st.text_input(
+                "Please specify the application",
+                key="data_source_other",
             )
 
-            other_source = ""
-            if source_choice == "Others (Please specify)":
-                other_source = st.text_input(
-                    "Please specify the application",
-                    key="data_source_other",
+        if st.button("Send file details to agent", key="confirm_file_source"):
+            if source_choice == "Others (Please specify)" and not other_source:
+                st.warning("Please specify the application before continuing.")
+            else:
+                source_app = (
+                    other_source if source_choice == "Others (Please specify)" else source_choice
                 )
-
-            if st.button("Send file details to agent", key="confirm_file_source"):
-                if source_choice == "Others (Please specify)" and not other_source:
-                    st.warning("Please specify the application before continuing.")
-                else:
-                    source_app = (
-                        other_source if source_choice == "Others (Please specify)" else source_choice
-                    )
-                    # Use the last saved file path so we can safely reference it across reruns
-                    file_path = st.session_state.get("last_uploaded_file_path", file_path)
-                    next_prompt = (
-                        f"Please ingest the data from this file: {file_path}. "
-                        f"This data was generated by {source_app}. After ingestion, please run the transformations."
-                    )
-# Hide uploader again after confirmation
-                    st.session_state.show_file_uploader = False
+                # Use the last saved file path so we can safely reference it across reruns
+                file_path = st.session_state.get("last_uploaded_file_path", file_path)
+                next_prompt = (
+                    f"Please ingest the data from this file: {file_path}. "
+                    f"This data was generated by {source_app}. After ingestion, please run the transformations."
+                )
 
 
 # User Input (Standard Chat) – pinned at bottom by Streamlit
