@@ -35,31 +35,6 @@ COMPLETE_PATH = os.path.join(DATA_PATH, "complete")
 SCHEMA_NAME = "s_linkedin"
 
 
-def map_basic_filename_to_table(filename: str) -> str:
-    """
-    Map LinkedIn basic creator insights filenames to canonical table names.
-
-    This inspects the *original* filename (before sanitization) so we can match
-    on key substrings from the exported files and route them into stable tables
-    that downstream dbt models expect.
-    """
-    fname = filename.lower()
-
-    if "demograp" in fname:
-        return "basic_content_jimmypang_demographics"
-    if "discover" in fname:
-        return "basic_content_jimmypang_discovery"
-    if "engageme" in fname:
-        return "basic_content_engagement"
-    if "follower" in fname:
-        return "basic_content_followers"
-    if "top_post" in fname or "top-post" in fname:
-        return "basic_content_top_posts"
-
-    # Fallback: preserve the old naming pattern for anything unexpected
-    return f"basic_uploaded_{sanitize_table_name(filename)}"
-
-
 def map_basic_sheet_to_table(sheet_name: str) -> str:
     """
     Map LinkedIn basic creator insights sheet names to canonical raw table names.
@@ -426,10 +401,11 @@ def ingest_uploaded_linkedin_file(file_path: str, mode: str = "basic") -> str:
         
         filename = os.path.basename(file_path)
 
-        # For basic creator insights, route uploads into canonical table names
-        # that dbt models expect. For all other modes, keep the previous pattern.
+        # For basic creator insights, canonical table names come from sheet/tab
+        # names via `map_basic_sheet_to_table`. The base `table_name` here is
+        # only used as a fallback for sheets that don't match any known pattern.
         if mode == "basic":
-            table_name = map_basic_filename_to_table(filename)
+            table_name = f"basic_uploaded_{sanitize_table_name(filename)}"
         else:
             table_name = f"{mode}_uploaded_{sanitize_table_name(filename)}"
         ext = os.path.splitext(file_path)[1].lower()
@@ -551,11 +527,12 @@ def main():
     for file_info in tqdm(files_to_process, desc="Ingesting Files"):
         file_path = file_info['path']
         filename = os.path.basename(file_path)
-        # For basic creator insights discovered via the CLI scan, also map into
-        # the same canonical table names used by the upload flow so that dbt
-        # sources can consistently reference them.
+        # For basic creator insights discovered via the CLI scan, canonical
+        # table names are again driven by sheet/tab names via
+        # `map_basic_sheet_to_table`. Here we only set a fallback base name for
+        # sheets that do not match the known patterns.
         if file_info['source'] == "basic":
-            table_name = map_basic_filename_to_table(filename)
+            table_name = f"basic_uploaded_{sanitize_table_name(filename)}"
         else:
             table_name = f"{file_info['source']}_{sanitize_table_name(filename)}"
         
