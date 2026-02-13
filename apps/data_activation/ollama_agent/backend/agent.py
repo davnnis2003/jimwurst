@@ -17,6 +17,7 @@ try:
     from langchain.tools import tool
     from utils.generic_ingestor import ingest_file
     from utils.dbt_runner import run_dbt_command
+    from apps.data_ingestion.manual_job.linkedin.ingest import ingest_uploaded_linkedin_file
     from langchain_community.utilities import SQLDatabase
     from langchain_community.agent_toolkits import create_sql_agent
 except ImportError:
@@ -26,6 +27,7 @@ except ImportError:
     from langchain.tools import tool
     from jimwurst.utils.generic_ingestor import ingest_file
     from jimwurst.utils.dbt_runner import run_dbt_command
+    from jimwurst.apps.data_ingestion.manual_job.linkedin.ingest import ingest_uploaded_linkedin_file
     from langchain_community.utilities import SQLDatabase
     from langchain_community.agent_toolkits import create_sql_agent
 
@@ -86,6 +88,15 @@ def ingest_data_tool(file_path: str):
         # If normalization fails for any reason, fall back to the cleaned string as-is.
         pass
 
+    # Route Excel uploads through the LinkedIn-specific ingestor so that
+    # LinkedIn basic creator insights land in the canonical s_linkedin tables
+    # (e.g., basic_content_jimmypang_demographics) that downstream dbt models expect.
+    ext = os.path.splitext(cleaned.lower())[1]
+    if ext in [".xlsx", ".xls"]:
+        # Treat Excel uploads as LinkedIn basic creator insights by default.
+        return ingest_uploaded_linkedin_file(cleaned, mode="basic")
+
+    # Fallback: use the generic ingestor for non-Excel files.
     return ingest_file(cleaned)
 
 @tool
