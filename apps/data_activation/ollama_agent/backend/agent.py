@@ -31,6 +31,14 @@ except ImportError:
     from langchain_community.utilities import SQLDatabase
     from langchain_community.agent_toolkits import create_sql_agent
 
+# Always prefer the LinkedIn ingestor from the current workspace path when available.
+# This avoids accidentally using a stale installed `jimwurst` package copy.
+try:
+    from apps.data_ingestion.manual_job.linkedin.ingest import ingest_uploaded_linkedin_file as _local_ingest_uploaded_linkedin_file
+    ingest_uploaded_linkedin_file = _local_ingest_uploaded_linkedin_file
+except Exception:
+    pass
+
 @tool
 def ingest_data_tool(file_path: str):
     """

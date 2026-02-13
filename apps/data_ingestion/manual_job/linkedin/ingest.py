@@ -60,6 +60,29 @@ def map_basic_filename_to_table(filename: str) -> str:
     return f"basic_uploaded_{sanitize_table_name(filename)}"
 
 
+def map_basic_sheet_to_table(sheet_name: str) -> str:
+    """
+    Map LinkedIn basic creator insights sheet names to canonical raw table names.
+
+    LinkedIn's "Content_*.xlsx" export is a multi-tab workbook; each populated tab
+    should land in its own stable table expected by downstream dbt sources.
+    """
+    sname = sheet_name.lower()
+
+    if "demograp" in sname:
+        return "basic_content_jimmypang_demographics"
+    if "discover" in sname:
+        return "basic_content_jimmypang_discovery"
+    if "engageme" in sname:
+        return "basic_content_engagement"
+    if "follower" in sname:
+        return "basic_content_followers"
+    if "top_post" in sname or "top-post" in sname or "top post" in sname:
+        return "basic_content_top_posts"
+
+    return ""
+
+
 def dedupe_columns(columns):
     """Ensure column names are unique by appending suffixes to duplicates."""
     seen = {}
@@ -82,19 +105,21 @@ class ExcelIngestor:
         self.conn = conn
     
     def ingest(self, file_path, table_name):
-        """Ingest Excel file into PostgreSQL"""
+        """Ingest Excel file into PostgreSQL and return created table names."""
         print(f"Processing Excel file: {table_name}...")
         
         try:
             if HAS_PANDAS:
-                self._ingest_with_pandas(file_path, table_name)
+                return self._ingest_with_pandas(file_path, table_name)
             else:
-                self._ingest_with_openpyxl(file_path, table_name)
+                return self._ingest_with_openpyxl(file_path, table_name)
         except Exception as e:
             print(f"Error processing Excel file {file_path}: {e}")
+            return []
 
     def _ingest_with_pandas(self, file_path, table_name):
         xls = pd.ExcelFile(file_path, engine="openpyxl")
+        created_tables = []
         for sheet_name in xls.sheet_names:
             df_raw = xls.parse(sheet_name, dtype=str, header=None)
             df_raw = df_raw.dropna(how="all")  # drop fully empty rows
@@ -131,9 +156,15 @@ class ExcelIngestor:
                 print(f"Skipping empty data after header in sheet: {sheet_name}")
                 continue
 
-            current_table_name = f"{table_name}_{sanitize_table_name(sheet_name)}" if len(xls.sheet_names) > 1 else table_name
+            mapped_table_name = map_basic_sheet_to_table(sheet_name)
+            if mapped_table_name:
+                current_table_name = mapped_table_name
+            else:
+                current_table_name = f"{table_name}_{sanitize_table_name(sheet_name)}" if len(xls.sheet_names) > 1 else table_name
             self._write_dataframe(df, current_table_name)
+            created_tables.append(current_table_name)
             print(f"  ✓ Ingested sheet '{sheet_name}' into table '{current_table_name}'")
+        return created_tables
 
     def _write_dataframe(self, df, current_table_name):
         cols_def = ", ".join([f"{sql.Identifier(c).as_string(self.conn)} TEXT" for c in df.columns])
@@ -162,13 +193,17 @@ class ExcelIngestor:
 
     def _ingest_with_openpyxl(self, file_path, table_name):
         workbook = load_workbook(file_path, data_only=True)
+        created_tables = []
 
         # Process each sheet in the workbook
         for sheet_name in workbook.sheetnames:
             sheet = workbook[sheet_name]
 
             # Create table name with sheet suffix if multiple sheets
-            if len(workbook.sheetnames) > 1:
+            mapped_table_name = map_basic_sheet_to_table(sheet_name)
+            if mapped_table_name:
+                current_table_name = mapped_table_name
+            elif len(workbook.sheetnames) > 1:
                 current_table_name = f"{table_name}_{sanitize_table_name(sheet_name)}"
             else:
                 current_table_name = table_name
@@ -257,9 +292,11 @@ class ExcelIngestor:
                     execute_values(cur, insert_query, data_rows)
                 self.conn.commit()
 
+            created_tables.append(current_table_name)
             print(f"  ✓ Ingested sheet '{sheet_name}' into table '{current_table_name}'")
 
         workbook.close()
+        return created_tables
 
 
 class CSVIngestor:
@@ -399,11 +436,18 @@ def ingest_uploaded_linkedin_file(file_path: str, mode: str = "basic") -> str:
 
         if mode == "basic" and ext in [".xlsx", ".xls"]:
             ingestor = ExcelIngestor(conn)
-            ingestor.ingest(file_path, table_name)
+            created_tables = ingestor.ingest(file_path, table_name)
             conn.close()
+            if created_tables:
+                table_list = "', '".join(created_tables)
+                return (
+                    f"Successfully ingested LinkedIn basic (Excel) export '{filename}' "
+                    f"into schema '{SCHEMA_NAME}' as {len(created_tables)} table(s) from populated tabs: "
+                    f"'{table_list}'."
+                )
             return (
                 f"Successfully ingested LinkedIn basic (Excel) export '{filename}' "
-                f"into schema '{SCHEMA_NAME}' as base table '{table_name}'."
+                f"into schema '{SCHEMA_NAME}', but no populated tabs were found."
             )
         elif mode == "complete" and ext == ".csv":
             ingestor = CSVIngestor(conn)
