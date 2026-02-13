@@ -35,6 +35,31 @@ COMPLETE_PATH = os.path.join(DATA_PATH, "complete")
 SCHEMA_NAME = "s_linkedin"
 
 
+def map_basic_filename_to_table(filename: str) -> str:
+    """
+    Map LinkedIn basic creator insights filenames to canonical table names.
+
+    This inspects the *original* filename (before sanitization) so we can match
+    on key substrings from the exported files and route them into stable tables
+    that downstream dbt models expect.
+    """
+    fname = filename.lower()
+
+    if "demograp" in fname:
+        return "basic_content_jimmypang_demographics"
+    if "discover" in fname:
+        return "basic_content_jimmypang_discovery"
+    if "engageme" in fname:
+        return "basic_content_engagement"
+    if "follower" in fname:
+        return "basic_content_followers"
+    if "top_post" in fname or "top-post" in fname:
+        return "basic_content_top_posts"
+
+    # Fallback: preserve the old naming pattern for anything unexpected
+    return f"basic_uploaded_{sanitize_table_name(filename)}"
+
+
 def dedupe_columns(columns):
     """Ensure column names are unique by appending suffixes to duplicates."""
     seen = {}
@@ -361,9 +386,15 @@ def ingest_uploaded_linkedin_file(file_path: str, mode: str = "basic") -> str:
 
         conn = get_db_connection()
         ensure_schema(conn, SCHEMA_NAME)
-
+        
         filename = os.path.basename(file_path)
-        table_name = f"{mode}_uploaded_{sanitize_table_name(filename)}"
+
+        # For basic creator insights, route uploads into canonical table names
+        # that dbt models expect. For all other modes, keep the previous pattern.
+        if mode == "basic":
+            table_name = map_basic_filename_to_table(filename)
+        else:
+            table_name = f"{mode}_uploaded_{sanitize_table_name(filename)}"
         ext = os.path.splitext(file_path)[1].lower()
 
         if mode == "basic" and ext in [".xlsx", ".xls"]:
@@ -476,7 +507,13 @@ def main():
     for file_info in tqdm(files_to_process, desc="Ingesting Files"):
         file_path = file_info['path']
         filename = os.path.basename(file_path)
-        table_name = f"{file_info['source']}_{sanitize_table_name(filename)}"
+        # For basic creator insights discovered via the CLI scan, also map into
+        # the same canonical table names used by the upload flow so that dbt
+        # sources can consistently reference them.
+        if file_info['source'] == "basic":
+            table_name = map_basic_filename_to_table(filename)
+        else:
+            table_name = f"{file_info['source']}_{sanitize_table_name(filename)}"
         
         if file_info['type'] == 'excel':
             excel_ingestor.ingest(file_path, table_name)
