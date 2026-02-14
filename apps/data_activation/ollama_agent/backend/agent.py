@@ -17,6 +17,7 @@ try:
     from langchain.tools import tool
     from utils.generic_ingestor import ingest_file
     from utils.dbt_runner import run_dbt_command
+    from apps.data_ingestion.manual_job.linkedin.ingest import ingest_uploaded_linkedin_file
     from langchain_community.utilities import SQLDatabase
     from langchain_community.agent_toolkits import create_sql_agent
 except ImportError:
@@ -26,16 +27,85 @@ except ImportError:
     from langchain.tools import tool
     from jimwurst.utils.generic_ingestor import ingest_file
     from jimwurst.utils.dbt_runner import run_dbt_command
+    from jimwurst.apps.data_ingestion.manual_job.linkedin.ingest import ingest_uploaded_linkedin_file
     from langchain_community.utilities import SQLDatabase
     from langchain_community.agent_toolkits import create_sql_agent
+
+# Always prefer the LinkedIn ingestor from the current workspace path when available.
+# This avoids accidentally using a stale installed `jimwurst` package copy.
+try:
+    from apps.data_ingestion.manual_job.linkedin.ingest import ingest_uploaded_linkedin_file as _local_ingest_uploaded_linkedin_file
+    ingest_uploaded_linkedin_file = _local_ingest_uploaded_linkedin_file
+except Exception:
+    pass
 
 @tool
 def ingest_data_tool(file_path: str):
     """
-    Ingests a CSV file into the database. 
-    Input should be the full absolute path to the CSV file.
+    Ingests a CSV or Excel file into the database.
+    Input MUST be ONLY the full absolute path to the file as stored on the server,
+    typically under ~/<username>/.jimwurst_data/<filename> when uploaded via the app.
+
+    CRITICAL:
+    - Do NOT append any extra text such as encoding notes or explanations.
+    - Do NOT wrap the path in quotes or backticks.
+    - If you want to mention encoding, do so in natural language outside the tool input.
+    - If the ingestion result starts with 'Error' or 'Error during ingestion', you MUST stop
+      and return that error message to the user instead of calling any other tools.
     """
-    return ingest_file(file_path)
+    # Defensive cleaning in case the model adds extra text
+    cleaned = file_path.strip()
+    # Strip common accidental wrappers, but only if they match
+    if cleaned and cleaned[0] in ("`", '"', "'") and cleaned[-1] == cleaned[0]:
+        cleaned = cleaned[1:-1].strip()
+    # If the model appended notes like " (using 'utf-8' encoding)", try a safe fallback:
+    # only strip that suffix if the original path does NOT exist but the trimmed one DOES.
+    if " (using" in cleaned:
+        original = cleaned
+        candidate = cleaned.split(" (using", 1)[0].strip()
+        try:
+            from os import path as _path
+            if not _path.exists(original) and _path.exists(candidate):
+                cleaned = candidate
+        except Exception:
+            # If anything goes wrong, keep the original string so we fail loudly instead of silently truncating.
+            cleaned = original
+
+    # Normalize any accidental /jimwurst_data/ paths to the canonical ~/.jimwurst_data location
+    try:
+        import os as _os
+        home = _os.path.expanduser("~")
+        canonical_dir = _os.path.join(home, ".jimwurst_data")
+
+        # Case 1: model invented something like "/Users/jimwurst_data/<file>"
+        marker = "/jimwurst_data/"
+        if marker in cleaned and ".jimwurst_data" not in cleaned:
+            after = cleaned.split(marker, 1)[1]
+            cleaned = _os.path.join(canonical_dir, after)
+
+        # Case 2: model used "~/jimwurst_data" instead of "~/.jimwurst_data"
+        tilde_marker = "~/jimwurst_data/"
+        if cleaned.startswith(tilde_marker):
+            after = cleaned[len(tilde_marker):]
+            cleaned = _os.path.join(canonical_dir, after)
+
+        # Final safety: ALWAYS resolve to ~/.jimwurst_data/<basename>, ignoring any other directories.
+        filename = _os.path.basename(cleaned)
+        cleaned = _os.path.join(canonical_dir, filename)
+    except Exception:
+        # If normalization fails for any reason, fall back to the cleaned string as-is.
+        pass
+
+    # Route Excel uploads through the LinkedIn-specific ingestor so that
+    # LinkedIn basic creator insights land in the canonical s_linkedin tables
+    # (e.g., basic_content_jimmypang_demographics) that downstream dbt models expect.
+    ext = os.path.splitext(cleaned.lower())[1]
+    if ext in [".xlsx", ".xls"]:
+        # Treat Excel uploads as LinkedIn basic creator insights by default.
+        return ingest_uploaded_linkedin_file(cleaned, mode="basic")
+
+    # Fallback: use the generic ingestor for non-Excel files.
+    return ingest_file(cleaned)
 
 @tool
 def run_transformations_tool(command: str = "build"):
@@ -97,10 +167,25 @@ DATA CATEGORIZATION:
 1. RAW DATA: Located in `s_` schemas (e.g., s_substack, s_linkedin). This is the landing zone for the ingestion system.
 2. CURATED DATA: Located in the `marts` schema. This is cleaned, modeled data ready for insight generation and analysis.
 
+ODS / APPLICATION MAPPING:
+1. Each source application has a dedicated ODS/ingestion schema starting with `s_`.
+2. Examples:
+   - `s_linkedin` is ONLY for raw LinkedIn data ingested from LinkedIn exports.
+   - `s_substack` is ONLY for raw Substack data.
+   - `s_spotify` is ONLY for raw Spotify data.
+   - `s_apple_health` is ONLY for raw Apple Health data.
+3. Never mix sources inside the same `s_` schema; assume one source-application per `s_` schema.
+
 CRITICAL SCHEMA PRIORITIES:
 1. MART SYSTEM: Use the `marts` schema for all analytical questions and insights. This is your primary source of truth.
 2. INGESTION SYSTEM: Use the `s_` schemas only when asked for "raw data" or when debugging ingestion.
 3. IGNORE: Do NOT use or refer to the `staging` or `intermediate` schemas.
+
+FILE INGESTION MODEL:
+1. Uploaded files from the UI are stored on disk under the user's home directory in a dedicated folder: `~/.jimwurst_data/<filename>`.
+2. The ingestion tool (`ingest_data_tool`) expects absolute file paths that point to this folder (or other server-accessible locations), NOT arbitrary client-side paths like `~/Downloads/...`.
+3. If the user mentions a file path in `Downloads` or any non-`~/.jimwurst_data` location, DO NOT try to verify the file's existence. Instead, explain that files must be uploaded via the app so they are stored in `~/.jimwurst_data`, and then ingested from there.
+4. Do NOT infer, assume, or check file existence from the database schemas; ingestion writes raw data into `s_` schemas, while table presence is independent from the original filesystem path.
 
 CRITICAL RULES:
 1. When asked "what data is there" or to "check data", you MUST list tables from both `marts` and `s_` schemas. 
@@ -177,8 +262,15 @@ WORKFLOW:
 
         @tool
         def query_database_tool(query_description: str):
-            """Useful for when you need to answer questions about data in the Data Warehouse. 
-            Input should be a natural language question about the data."""
+            """Useful for when you need to answer questions about data in the Data Warehouse.
+            Input should be a natural language question about the data.
+
+            IMPORTANT:
+            - Do NOT call this tool to 'confirm ingestion' immediately after ingest_data_tool
+              returned an error (messages starting with 'Error' or 'Error during ingestion').
+              In that case, simply surface the ingestion error to the user instead of querying
+              the database.
+            """
             try:
                 result = sql_agent_executor.invoke({"input": query_description})
                 if isinstance(result, dict):

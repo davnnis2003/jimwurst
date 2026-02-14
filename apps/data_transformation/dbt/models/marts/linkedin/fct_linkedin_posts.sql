@@ -1,5 +1,4 @@
 {{ config(
-    enabled=var('enable_linkedin_models', false),
     tags=['marts', 'linkedin', 'posts']
 ) }}
 
